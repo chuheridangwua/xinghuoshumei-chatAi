@@ -1,0 +1,12 @@
+/* 样式覆盖文件 */
+
+/* 修复折叠面板的overflow问题 */
+.t-collapse-panel__wrapper .t-collapse-panel__body {
+    overflow: initial !important;
+}
+
+/* 取消p标签间距 */
+p {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
