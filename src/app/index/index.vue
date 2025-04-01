@@ -111,6 +111,15 @@ const scrollTopThreshold = 50; // 滚动到顶部触发阈值
 const hasMoreConversations = ref(true); // 是否有更多会话可加载
 const loadingMoreConversations = ref(false); // 是否正在加载更多会话
 
+onMounted(() => {
+    // 初始化主题（默认或者根据系统偏好）
+    initTheme();
+    // document.documentElement.removeAttribute('theme-mode');
+    console.log('页面加载');
+    initChatData();
+});
+
+
 // 当前会话标题，优先显示最近一次的用户消息，如果没有则显示会话ID的前8位
 const currentConversationTitle = computed(() => {
     const conversation = conversationList.value.find(c => c.id === currentConversationId.value);
@@ -155,13 +164,7 @@ const conversationOptions = computed(() => {
     return options;
 });
 
-onMounted(() => {
-    // 初始化主题（默认或者根据系统偏好）
-    initTheme();
-    document.documentElement.removeAttribute('theme-mode');
-    console.log('页面加载');
-    initChatData();
-});
+
 
 // 初始化聊天数据
 const initChatData = async () => {
@@ -689,7 +692,6 @@ const loadMoreConversations = async () => {
     margin-left: 16px;
 }
 
-// 会话选择器样式
 .conversation-dropdown {
     margin: 0 10px;
     
