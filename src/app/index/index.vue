@@ -341,6 +341,7 @@ const loadMoreHistory = async () => {
 };
 
 // 处理滚动事件，当滚动到顶部时加载更多历史消息
+
 const handleScroll = (e) => {
     // 确保e.detail存在，否则使用默认值
     const scrollTop = e.detail?.scrollTop || 0;
