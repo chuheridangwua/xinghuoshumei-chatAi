@@ -1,135 +1,68 @@
 <template>
     <div class="app-container">
-        <!-- 添加固定的头部导航栏 -->
-        <div class="fixed-header">
-            <!-- 左侧菜单图标，点击打开抽屉 -->
-            <t-button variant="text" class="header-icon" @click="showConversationDrawer = true">
-                <t-icon name="menu" />
-            </t-button>
-            
-            <!-- 中间标题 -->
-            <div class="header-title">
-                {{ currentConversationTitle }}
-            </div>
-            
-            <!-- 右侧新建对话按钮 -->
-            <t-button variant="text" class="header-icon" @click="handleNewConversation">
-                <t-icon name="add" />
-            </t-button>
-        </div>
+        <!-- 使用抽取出的头部导航栏组件 -->
+        <HeaderNav :title="currentConversationTitle" @open-drawer="showConversationDrawer = true"
+            @new-conversation="handleNewConversation" />
 
-        <!-- 侧边抽屉 - 对话列表 -->
-        <t-drawer
-            v-model:visible="showConversationDrawer"
-            placement="left"
-            :close-on-overlay-click="true"
-            :footer="false"
-            title="对话列表"
-        >
-            <t-list>
-                <!-- 新对话选项 -->
-                <t-list-item 
-                    @click="handleNewConversation"
-                    class="conversation-item"
-                    :class="{ 'active': currentConversationId === '' }"
-                >
-                    <t-icon name="add" class="conversation-icon" />
-                    <span class="conversation-text">新对话</span>
-                </t-list-item>
-                
-                <!-- 对话列表 -->
-                <t-list-item 
-                    v-for="conversation in conversationList" 
-                    :key="conversation.id"
-                    @click="handleConversationSelect({ value: conversation.id })"
-                    class="conversation-item"
-                    :class="{ 'active': conversation.id === currentConversationId }"
-                >
-                    <t-icon name="chat" class="conversation-icon" />
-                    <span class="conversation-text">{{ conversation.last_message && conversation.last_message.trim()
-                        ? (conversation.last_message.length > 20
-                            ? conversation.last_message.substring(0, 20) + '...'
-                            : conversation.last_message)
-                        : `对话 ${conversation.id.substring(0, 8)}...` }}</span>
-                    
-                    <!-- 删除按钮 -->
-                    <t-button 
-                        variant="text" 
-                        shape="circle" 
-                        size="small" 
-                        class="delete-btn"
-                        @click.stop="handleConversationSelect({ value: `delete-${conversation.id}` })"
-                    >
-                        <t-icon name="delete" />
-                    </t-button>
-                </t-list-item>
-                
-                <!-- 加载更多选项 -->
-                <t-list-item 
-                    v-if="hasMoreConversations" 
-                    @click="loadMoreConversations"
-                    class="load-more-item"
-                >
-                    <t-button size="small" variant="text" :loading="loadingMoreConversations">
-                        加载更多会话
-                    </t-button>
-                </t-list-item>
-            </t-list>
-        </t-drawer>
+        <!-- 使用抽取出的对话列表抽屉组件 -->
+        <ConversationDrawer v-model:visible="showConversationDrawer" :current-conversation-id="currentConversationId"
+            :grouped-conversations="groupedConversations" :has-more-conversations="hasMoreConversations"
+            :loading-more-conversations="loadingMoreConversations" @select="handleConversationSelect"
+            @new-conversation="handleNewConversation" @load-more="loadMoreConversations" />
 
-    <t-chat class="chat-container" ref="chatRef" layout="both" :clear-history="chatList.length > 0 && !isStreamLoad"
-        @clear="clearConfirm" @scroll="handleScroll">
-        <!-- 对话列表选择器 -->
+        <t-chat class="chat-container" ref="chatRef" layout="both" :clear-history="chatList.length > 0 && !isStreamLoad"
+            @clear="clearConfirm" @scroll="handleScroll">
+            <!-- 对话列表选择器 -->
 
 
-        <template #header v-if="hasMoreMessages && currentConversationId">
-            <!-- 加载更多指示器 -->
-            <t-loading v-if="loadingMore" size="small" />
-            <t-button v-else variant="text" size="small" @click="loadMoreHistory">加载更多</t-button>
-        </template>
+            <template #header v-if="hasMoreMessages && currentConversationId">
+                <!-- 加载更多指示器 -->
+                <t-loading v-if="loadingMore" size="small" />
+                <t-button v-else variant="text" size="small" @click="loadMoreHistory">加载更多</t-button>
+            </template>
 
 
-        <template v-for="(item, index) in chatList" :key="index">
+            <template v-for="(item, index) in chatList" :key="index">
 
-            <t-chat-item :avatar="item.avatar" :name="item.name" :role="item.role" :datetime="item.datetime"
-                :content="item.content">
-                <template #content>
-                    <!-- 只有助手消息且有思考内容才显示思考框 -->
-                    <t-chat-reasoning v-if="item.reasoning && item.reasoning.trim() && item.role === 'assistant'"
-                        expand-icon-placement="right"
-                        @expand-change="(expandValue) => handleChange(expandValue, { index })">
-                        <template #header>
-                            <t-chat-loading v-if="loading && index === 0" text="思考中..." indicator />
-                            <div v-else class="reasoning-header">
-                                <t-icon name="dart-board"></t-icon>
-                                <span>思考过程</span>
-                            </div>
-                        </template>
-                        <t-chat-content :content="item.reasoning || ''" />
-                    </t-chat-reasoning>
-                    <!-- 显示消息内容，如果没有则显示占位 -->
-                    <t-chat-content v-if="item.content && item.content.trim().length > 0" :content="item.content" />
-                </template>
+                <t-chat-item :avatar="item.avatar" :name="item.name" :role="item.role" :datetime="item.datetime"
+                    :content="item.content">
+                    <template #content>
+                        <!-- 只有助手消息且有思考内容才显示思考框 -->
+                        <t-chat-reasoning v-if="item.reasoning && item.reasoning.trim() && item.role === 'assistant'"
+                            expand-icon-placement="right"
+                            @expand-change="(expandValue) => handleChange(expandValue, { index })">
+                            <template #header>
+                                <t-chat-loading v-if="loading && index === 0" text="思考中..." indicator />
+                                <div v-else class="reasoning-header">
+                                    <t-icon name="dart-board"></t-icon>
+                                    <span>思考过程</span>
+                                </div>
+                            </template>
+                            <t-chat-content :content="item.reasoning || ''" />
+                        </t-chat-reasoning>
+                        <!-- 显示消息内容，如果没有则显示占位 -->
+                        <t-chat-content v-if="item.content && item.content.trim().length > 0" :content="item.content" />
+                    </template>
 
-                <!-- 第一条消息且正在加载时显示加载动画 -->
-                <template v-if="index === 0 && loading && !firstTokenReceived" #content>
-                    <div class="loading-space">
-                        <t-space>
-                            <t-chat-loading animation="moving" text="思考中..." />
-                        </t-space>
-                    </div>
-                </template>
-                <!-- 操作按钮，只对助手消息显示 -->
-                <template v-if="!isStreamLoad && item.role === 'assistant'" #actions>
-                    <chat-action :is-good="isGood" :is-bad="isBad" :content="item.content || ''"
-                        @operation="(type, { e }) => handleOperation(type, { e, index })" />
-                </template>
-            </t-chat-item>
-        </template>
-        <template #footer>
-            <chat-sender :loading="loading" @send="inputEnter" @stop="onStop" />
-        </template>
-    </t-chat>
+                    <!-- 第一条消息且正在加载时显示加载动画 -->
+                    <template v-if="index === 0 && loading && !firstTokenReceived" #content>
+                        <div class="loading-space">
+                            <t-space>
+                                <t-chat-loading animation="moving" text="思考中..." />
+                            </t-space>
+                        </div>
+                    </template>
+                    <!-- 操作按钮，只对助手消息显示 -->
+                    <template v-if="!isStreamLoad && item.role === 'assistant'" #actions>
+                        <chat-action :is-good="isGood" :is-bad="isBad" :content="item.content || ''"
+                            @operation="(type, { e }) => handleOperation(type, { e, index })" />
+                    </template>
+                </t-chat-item>
+            </template>
+            <template #footer>
+                <chat-sender :loading="loading" @send="inputEnter" @stop="onStop" />
+            </template>
+        </t-chat>
     </div>
 </template>
 
@@ -138,6 +71,8 @@ import { ref, onMounted, computed } from 'vue';
 import { chatWithModel, loadSystemPrompt, resetConversation } from '/static/app/api/model.js'
 import ChatAction from './comps/ChatAction.vue';
 import ChatSender from './comps/ChatSender.vue';
+import HeaderNav from './comps/HeaderNav.vue';
+import ConversationDrawer from './comps/ConversationDrawer.vue';
 import {
     getChatHistory,
     saveChatHistory,
@@ -157,6 +92,28 @@ import {
     handleRequestComplete
 } from '/static/app/api/request.js';
 import { initTheme, setThemeMode, ThemeMode } from '/static/app/api/theme.js';
+
+// 获取对话显示标题的方法
+const getConversationTitle = (conversation, maxLength = 20) => {
+    if (!conversation) return '新对话';
+
+    // 尝试使用最近的用户消息作为标题
+    if (conversation.last_message && conversation.last_message.trim()) {
+        return conversation.last_message.length > maxLength
+            ? conversation.last_message.substring(0, maxLength) + '...'
+            : conversation.last_message;
+    }
+
+    // 如果没有last_message但有name且不是默认名称
+    if (conversation.name && conversation.name !== 'New conversation') {
+        return conversation.name.length > maxLength
+            ? conversation.name.substring(0, maxLength) + '...'
+            : conversation.name;
+    }
+
+    // 如果没有最近消息，使用ID的一部分
+    return `对话 ${conversation.id.substring(0, 8)}...`;
+};
 
 const fetchCancel = ref(null); // 用于取消请求的AbortController
 const loading = ref(false); // 是否正在加载中
@@ -194,48 +151,67 @@ onMounted(() => {
 // 当前会话标题，优先显示最近一次的用户消息，如果没有则显示会话ID的前8位
 const currentConversationTitle = computed(() => {
     const conversation = conversationList.value.find(c => c.id === currentConversationId.value);
-    if (!conversation) return '新对话';
-
-    // 尝试使用最近的用户消息作为标题
-    if (conversation.last_message && conversation.last_message.trim()) {
-        return conversation.last_message.length > 15
-            ? conversation.last_message.substring(0, 15) + '...'
-            : conversation.last_message;
-    }
-
-    // 如果没有最近消息，使用ID的一部分
-    return `对话 ${conversation.id.substring(0, 8)}...`;
+    return getConversationTitle(conversation, 15);
 });
 
-// 构造下拉菜单选项
-const conversationOptions = computed(() => {
-    const options = conversationList.value.map(conversation => {
-        const label = conversation.last_message && conversation.last_message.trim()
-            ? (conversation.last_message.length > 15
-                ? conversation.last_message.substring(0, 15) + '...'
-                : conversation.last_message)
-            : `对话 ${conversation.id.substring(0, 8)}...`;
+// 将对话按日期分组：今天、昨天、过去7天、更早
+const groupedConversations = computed(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-        return {
-            content: label,
-            value: conversation.id,
-            // 显示删除按钮
-            items: [
-                { content: '删除', value: `delete-${conversation.id}` }
-            ]
-        };
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const lastWeekStart = new Date(today);
+    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+
+    // 初始化分组
+    const groups = {
+        today: [],
+        yesterday: [],
+        lastWeek: [],
+        older: []
+    };
+
+    // 分类每个对话
+    conversationList.value.forEach(conversation => {
+        // 解析更新时间 - 服务器返回的是Unix时间戳（秒级）
+        let updateTime;
+        if (conversation.updated_at) {
+            // 将秒级时间戳转换为毫秒级
+            updateTime = new Date(conversation.updated_at * 1000);
+        } else {
+            updateTime = new Date(); // 如果没有更新时间，默认为当前时间
+        }
+
+        // 只比较日期，不比较时间
+        const updateDate = new Date(updateTime);
+        updateDate.setHours(0, 0, 0, 0);
+
+        // 调试输出
+        console.log(`对话ID: ${conversation.id}, 时间戳: ${conversation.updated_at}, 日期: ${updateDate.toISOString()}`);
+
+        if (updateDate.getTime() === today.getTime()) {
+            groups.today.push(conversation);
+        } else if (updateDate.getTime() === yesterday.getTime()) {
+            groups.yesterday.push(conversation);
+        } else if (updateDate.getTime() >= lastWeekStart.getTime()) {
+            groups.lastWeek.push(conversation);
+        } else {
+            groups.older.push(conversation);
+        }
     });
 
-    // 添加"新对话"选项
-    options.unshift({
-        content: '新对话',
-        value: 'new'
+    // 调试输出
+    console.log('分组结果:', {
+        today: groups.today.length,
+        yesterday: groups.yesterday.length,
+        lastWeek: groups.lastWeek.length,
+        older: groups.older.length
     });
 
-    return options;
+    return groups;
 });
-
-
 
 // 初始化聊天数据
 const initChatData = async () => {
@@ -249,7 +225,7 @@ const initChatData = async () => {
 
     // 获取服务器会话列表
     try {
-        // 使用新参数调用
+        // 使用新参数调用，每次加载20条对话
         const serverConversations = await getServerConversations({
             limit: 20,
             sort_by: '-updated_at'
@@ -258,6 +234,9 @@ const initChatData = async () => {
         if (serverConversations && Array.isArray(serverConversations)) {
             conversationList.value = serverConversations;
             console.log('服务器会话列表获取成功:', serverConversations);
+
+            // 判断是否还有更多对话可加载
+            hasMoreConversations.value = serverConversations.length >= 20;
 
             // 如果存在会话，加载最近的一个会话
             if (serverConversations.length > 0) {
@@ -368,6 +347,7 @@ const handleConversationSelect = async (option) => {
     if (typeof value === 'string' && value.startsWith('delete-')) {
         const conversationId = value.substring(7); // 去掉"delete-"前缀
         console.log('删除对话:', conversationId);
+
         // TODO: 调用API删除对话
         // 暂时从列表中移除
         conversationList.value = conversationList.value.filter(c => c.id !== conversationId);
@@ -378,6 +358,8 @@ const handleConversationSelect = async (option) => {
             chatList.value = [];
             currentConversationId.value = '';
         }
+
+        // 不关闭抽屉，让用户可以继续操作
         return;
     }
 
@@ -397,6 +379,8 @@ const handleConversationSelect = async (option) => {
     if (value !== currentConversationId.value) {
         currentConversationId.value = value;
         await loadConversationHistory(value);
+        // 关闭抽屉
+        showConversationDrawer.value = false;
     }
 };
 
@@ -712,7 +696,7 @@ const loadMoreConversations = async () => {
             return;
         }
 
-        // 获取更多会话
+        // 获取更多会话，每次固定加载20条
         const moreConversations = await getServerConversations({
             last_id: lastId,
             limit: 20,
@@ -722,11 +706,13 @@ const loadMoreConversations = async () => {
         if (moreConversations && Array.isArray(moreConversations) && moreConversations.length > 0) {
             // 合并会话列表
             conversationList.value = [...conversationList.value, ...moreConversations];
+            console.log('加载更多会话成功，数量:', moreConversations.length);
 
-            // 判断是否还有更多
+            // 判断是否还有更多对话可加载
             hasMoreConversations.value = moreConversations.length >= 20;
         } else {
             hasMoreConversations.value = false;
+            console.log('没有更多会话可加载');
         }
     } catch (error) {
         console.error('加载更多会话失败:', error);
@@ -772,14 +758,14 @@ const handleNewConversation = () => {
     border-bottom: 1px solid $component-stroke;
     box-shadow: $shadow-1;
     transition: all 0.3s ease;
-    
+
     @media (max-width: 768px) {
         padding: $comp-paddingLR-xs $comp-paddingLR-s;
     }
-    
+
     .t-button {
         transition: all 0.25s ease;
-        
+
         &:hover {
             transform: translateY(-1px);
         }
@@ -787,6 +773,7 @@ const handleNewConversation = () => {
 
     .header-icon {
         color: $text-color-secondary;
+
         &:hover {
             color: $brand-color;
         }
@@ -801,7 +788,7 @@ const handleNewConversation = () => {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        
+
         @media (max-width: 768px) {
             font-size: $font-size-body-small;
             max-width: 50%;
@@ -811,6 +798,24 @@ const handleNewConversation = () => {
 
 /* 对话列表抽屉样式 */
 .t-drawer {
+    .conversation-group {
+        margin-bottom: $comp-margin-m;
+
+        .group-title {
+            font-size: $font-size-body-small;
+            color: $text-color-secondary;
+            padding: $comp-paddingTB-xs $comp-paddingLR-m;
+            margin-bottom: $size-1;
+            font-weight: 500;
+            position: sticky;
+            top: 0;
+            background-color: $bg-color-container;
+            z-index: 10;
+            backdrop-filter: blur(5px);
+            border-bottom: 1px solid $component-stroke;
+        }
+    }
+
     .conversation-item {
         display: flex;
         align-items: center;
@@ -819,52 +824,58 @@ const handleNewConversation = () => {
         border-radius: $radius-default;
         transition: all 0.3s ease;
         position: relative;
-        
+
         &:hover {
             background-color: $bg-color-container-hover;
-            
-            .delete-btn {
-                opacity: 1;
-            }
         }
-        
+
         &.active {
             background-color: $brand-color-light;
             color: $brand-color;
-            
+
             .conversation-icon {
                 color: $brand-color;
             }
         }
-        
+
         .conversation-icon {
             margin-right: $size-2;
             color: $text-color-secondary;
         }
-        
+
         .conversation-text {
             flex: 1;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-        
+
         .delete-btn {
-            opacity: 0;
+            /* 移除透明度，使按钮始终可见 */
+            opacity: 1;
             color: $text-color-secondary;
             transition: all 0.3s ease;
-            
+
             &:hover {
                 color: $error-color;
                 background-color: $error-color-light;
             }
+
+            /* 活跃状态样式 */
+            &:active {
+                color: $error-color;
+                background-color: $error-color-light;
+                transform: scale(0.95);
+            }
         }
     }
-    
-    .load-more-item {
+
+    .load-more-container {
         display: flex;
         justify-content: center;
         padding: $comp-paddingTB-s 0;
+        margin-top: $comp-margin-s;
+        border-top: 1px solid $component-stroke;
     }
 }
 
@@ -872,12 +883,14 @@ const handleNewConversation = () => {
     height: 100vh;
     width: 100vw;
     padding: $comp-size-xxxl $size-2 $comp-margin-l;
-    padding-top: 70px; /* 确保不被头部遮挡 */
+    padding-top: 70px;
+    /* 确保不被头部遮挡 */
     transition: padding 0.3s ease;
     background-color: $bg-color-page;
-    
+
     @media (max-width: 768px) {
-        padding-top: 60px; /* 移动端调整 */
+        padding-top: 60px;
+        /* 移动端调整 */
     }
 
     .t-space {
@@ -898,11 +911,11 @@ const handleNewConversation = () => {
             transition: all 0.3s ease;
         }
     }
-    
+
     .t-chat-item {
         transition: transform 0.2s ease, box-shadow 0.3s ease;
         border-radius: $radius-medium;
-        
+
         &:hover {
             transform: translateY(-$size-1);
             box-shadow: $shadow-2;
