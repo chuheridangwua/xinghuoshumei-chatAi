@@ -6,6 +6,7 @@
 // 导入其他样式文件
 @use './overrides.scss';
 @use './dark-theme.scss';
+@use './markdown-overrides.scss';  // 导入Markdown样式覆盖
 
 // 全局样式
 :root {
@@ -256,4 +257,31 @@ body, html {
   &-success { color: variables.$success-color; }
   &-warning { color: variables.$warning-color; }
   &-error { color: variables.$error-color; }
+}
+
+// Markdown标题样式重置 - 添加在文件末尾以确保优先级最高
+body {
+  // 使用!important和属性选择器提高优先级
+  [class*="chat"] h1,
+  [class*="chat"] h2,
+  [class*="chat"] h3,
+  [class*="chat"] h4,
+  [class*="chat"] h5,
+  [class*="chat"] h6 {
+    margin-top: 0 !important;
+    margin-bottom: 8px !important;
+    padding: 0 !important;
+    line-height: inherit !important;
+  }
+  
+  // 使用更具体的选择器
+  .t-chat__content,
+  .t-chat-content {
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 0 !important;
+      margin-bottom: 8px !important;
+      padding: 0 !important;
+      line-height: inherit !important;
+    }
+  }
 } 

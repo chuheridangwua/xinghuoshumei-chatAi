@@ -14,7 +14,7 @@
                 <t-chat-content :content="reasoning || ''" />
             </t-chat-reasoning>
             <!-- 显示消息内容，如果没有则显示占位 -->
-            <t-chat-content v-if="content && content.trim().length > 0" :content="content" />
+            <t-chat-content v-if="content && content.trim().length > 0" :content="content" class="zero-margins" />
         </template>
 
         <!-- 第一条消息且正在加载时显示加载动画 -->
@@ -120,5 +120,13 @@ const handleOperation = (type, options) => {
     }
 }
 
-
+/* 确保Markdown内容中的元素没有边距 */
+:deep(.zero-margins) {
+    h1, h2, h3, h4, h5, h6 {
+        margin-top: 0 !important;
+        margin-bottom: 8px !important;
+        padding: 0 !important;
+        line-height: normal !important;
+    }
+}
 </style>

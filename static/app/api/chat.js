@@ -564,6 +564,8 @@ export const getSuggestedQuestions = async (messageId) => {
             }
         });
 
+        console.log(response);
+
         if (!response.ok) {
             const errorText = await response.text();
             console.error(`获取建议问题失败: ${response.status} ${errorText}`);

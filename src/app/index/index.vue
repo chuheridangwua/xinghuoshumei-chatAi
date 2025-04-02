@@ -20,6 +20,14 @@
                     @operation="(type, e) => handleOperation(type, { index, e })" />
             </template>
             <template #footer>
+                <!-- 建议问题标签 -->
+                <div v-if="suggestedQuestions.length > 0" class="suggested-questions">
+                    <t-tag v-for="(question, qIndex) in suggestedQuestions" :key="qIndex" 
+                           theme="primary" variant="light" class="question-tag" size="medium"
+                           @click="handleSuggestedQuestion(question)">
+                        {{ question }}
+                    </t-tag>
+                </div>
                 <chat-sender :loading="loading" @send="inputEnter" @stop="onStop" />
             </template>
         </t-chat>
@@ -133,6 +141,8 @@ const currentDeletingId = ref('');
 const currentTaskId = ref(null);
 // 添加变量保存当前消息ID
 const currentMessageId = ref('');
+// 添加变量保存建议问题列表
+const suggestedQuestions = ref([]);
 
 onMounted(() => {
     // 初始化主题（默认或者根据系统偏好）
@@ -388,6 +398,12 @@ const clearConfirm = async function () {
 // 停止请求
 const onStop = async function () {
     try {
+        // 防止重复中断
+        if (!loading.value && !isStreamLoad.value) {
+            console.log('请求已经停止，不再执行中断操作');
+            return;
+        }
+        
         // 立即重置状态 - 先更新UI再中断请求
         loading.value = false;
         isStreamLoad.value = false;
@@ -399,37 +415,30 @@ const onStop = async function () {
         // 处理中断UI更新
         handleRequestAbort(lastItem, { loading, isStreamLoad });
 
-        // 如果有任务ID，使用新的API停止流式响应
-        if (currentTaskId.value) {
-            const userId = localStorage.getItem('dify_user_id');
-            
-            // 先发送停止请求
-            const stopResult = await stopStreamResponse(currentTaskId.value, userId);
-            
-            // 无论成功失败，都尝试使用AbortController中断
-            if (fetchCancel.value) {
-                try {
-                    fetchCancel.value();
-                } catch (abortError) {
-                    console.error('中断请求时出错:', abortError);
-                } finally {
-                    // 不论中断成功与否，都清空中断函数
-                    fetchCancel.value = null;
-                    // 清空任务ID
-                    currentTaskId.value = null;
-                }
+        // 备份中断函数并立即清空，避免重复调用
+        const abortFunction = fetchCancel.value;
+        fetchCancel.value = null;
+        
+        // 备份任务ID并立即清空
+        const taskId = currentTaskId.value;
+        currentTaskId.value = null;
+        
+        // 如果有任务ID，优先使用新的API停止流式响应
+        if (taskId) {
+            try {
+                const userId = localStorage.getItem('dify_user_id');
+                await stopStreamResponse(taskId, userId);
+            } catch (stopError) {
+                console.error('API停止请求失败:', stopError);
             }
-        } else {
-            // 没有任务ID时，使用原来的方式中断
-            if (fetchCancel.value) {
-                try {
-                    fetchCancel.value();
-                } catch (abortError) {
-                    console.error('中断请求时出错:', abortError);
-                } finally {
-                    // 不论中断成功与否，都清空中断函数
-                    fetchCancel.value = null;
-                }
+        }
+        
+        // 最后尝试使用AbortController中断
+        if (abortFunction) {
+            try {
+                abortFunction();
+            } catch (abortError) {
+                console.error('中断请求时出错:', abortError);
             }
         }
     } catch (error) {
@@ -499,9 +508,6 @@ const handleModelRequest = async (inputValue) => {
     const { controller, signal, abortRequest } = createRequestController();
     fetchCancel.value = abortRequest;
 
-    // 设置超时保护，防止请求无响应
-    const timeoutId = createTimeoutProtection(abortRequest);
-
     try {
         // 准备请求选项，如果有当前会话ID则使用，否则创建新会话
         const requestOptions = {
@@ -529,12 +535,8 @@ const handleModelRequest = async (inputValue) => {
                         if (!lastItem.reasoning || lastItem.reasoning === '思考中...') {
                             lastItem.reasoning = reasoningText || '';
                         } else {
-                            // 否则追加思考内容
+                            // 否则追加思考内容, 完全保留原格式
                             lastItem.reasoning = (lastItem.reasoning || '') + (reasoningText || '');
-                        }
-                        // 确保尾部没有不必要的空格或符号
-                        if (lastItem.reasoning) {
-                            lastItem.reasoning = lastItem.reasoning.trim();
                         }
                         // 滚动到底部
                         backBottom();
@@ -553,11 +555,8 @@ const handleModelRequest = async (inputValue) => {
                         firstTokenReceived.value = true;
                     }
                     try {
+                        // 完全保留原格式，不做任何处理
                         lastItem.content = (lastItem.content || '') + (content || '');
-                        // 确保内容尾部没有不必要的空格或符号
-                        if (lastItem.content) {
-                            lastItem.content = lastItem.content.trim();
-                        }
                         // 滚动到底部
                         backBottom();
                     } catch (error) {
@@ -600,7 +599,7 @@ const handleModelRequest = async (inputValue) => {
                     // 处理请求完成
                     handleRequestComplete(isOk, msg, lastItem,
                         { loading, isStreamLoad },
-                        { timeoutId, fetchCancel }
+                        { fetchCancel }
                     );
 
                     // 清除任务ID
@@ -622,12 +621,17 @@ const handleModelRequest = async (inputValue) => {
                             // 延时2秒后再获取建议问题列表
                             setTimeout(async () => {
                                 try {
-                                    const suggestedQuestions = await getSuggestedQuestions(messageId);
-                                    if (suggestedQuestions && suggestedQuestions.length > 0) {
+                                    const questions = await getSuggestedQuestions(messageId);
+                                    if (questions && questions.length > 0) {
+                                        // 保存建议问题列表
+                                        suggestedQuestions.value = questions;
                                     } else {
+                                        // 清空建议问题列表
+                                        suggestedQuestions.value = [];
                                     }
                                 } catch (delayedError) {
                                     console.error('延时获取建议问题出错:', delayedError);
+                                    suggestedQuestions.value = [];
                                 }
                             }, 2000);
                             
@@ -670,8 +674,6 @@ const handleModelRequest = async (inputValue) => {
         );
     } catch (error) {
         console.error('处理模型请求时发生错误:', error);
-        // 清除超时保护
-        clearTimeout(timeoutId);
 
         // 处理请求错误
         handleRequestError(error, lastItem, { loading, isStreamLoad });
@@ -842,6 +844,16 @@ const cancelDelete = () => {
     showDeleteDialog.value = false;
     currentDeletingId.value = '';
 };
+
+// 处理点击建议问题
+const handleSuggestedQuestion = (question) => {
+    // 使用选择的建议问题
+    inputEnter(question);
+    // 清空建议问题列表
+    suggestedQuestions.value = [];
+};
+
+
 </script>
 
 <style lang="scss">
@@ -876,6 +888,17 @@ const cancelDelete = () => {
             box-shadow: $shadow-2;
         }
     }
+    
+    /* 确保Markdown标题没有边距 */
+    :deep(.t-chat-content),
+    :deep(.t-chat__content) {
+        h1, h2, h3, h4, h5, h6 {
+            margin-top: 0 !important;
+            margin-bottom: 8px !important;
+            padding: 0 !important;
+            line-height: 1.2 !important;
+        }
+    }
 }
 
 .dialog-content {
@@ -895,5 +918,24 @@ const cancelDelete = () => {
     margin-top: $size-3;
     margin-left: $size-4;
     transition: all 0.3s ease;
+}
+
+/* 建议问题样式 */
+.suggested-questions {
+    display: flex;
+    flex-wrap: wrap;
+    padding: $comp-margin-xs $comp-margin-s;
+    gap: $comp-margin-xs;
+    justify-content: center;
+}
+
+.question-tag {
+    cursor: pointer;
+    margin-bottom: $comp-margin-xxs;
+    transition: all 0.2s ease;
+    
+    &:hover {
+        transform: translateY(-2px);
+    }
 }
 </style>

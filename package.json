@@ -13,6 +13,7 @@
     "ant-design-vue": "^4.2.6",
     "ant-design-x-vue": "^1.0.7",
     "axios": "^1.8.4",
+    "marked": "^15.0.7",
     "openai": "^4.86.1",
     "tdesign-mobile-vue": "^1.8.3",
     "tdesign-vue-next": "^1.11.4",

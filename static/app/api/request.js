@@ -12,7 +12,18 @@ export const createRequestController = () => {
     
     // 创建中断函数
     const abortRequest = () => {
-        controller.abort();
+        // 只有在未中断的情况下才执行中断操作
+        if (!controller.signal.aborted) {
+            try {
+                console.log('执行请求中断操作');
+                controller.abort();
+                console.log('请求中断完成');
+            } catch (error) {
+                console.error('中断请求时出错:', error);
+            }
+        } else {
+            console.log('请求已经被中断，不再重复执行');
+        }
     };
     
     return {
@@ -56,7 +67,7 @@ export const handleRequestAbort = (lastMessage, stateControls) => {
     // 处理消息状态
     if (lastMessage && lastMessage.role === 'assistant') {
         // 如果消息为空，添加一个提示
-        if (!lastMessage.content || lastMessage.content.trim() === '') {
+        if (!lastMessage.content || lastMessage.content === '') {
             lastMessage.content = '回复已中断';
         } else if (!lastMessage.content.includes('[已中断]')) {
             lastMessage.content += ' [已中断]';
@@ -82,6 +93,8 @@ export const handleRequestError = (error, lastMessage, stateControls) => {
     const { loading, isStreamLoad } = stateControls;
     const errorMessage = error?.message || error || '请求失败';
     
+    console.log('处理请求错误:', errorMessage);
+    
     // 重置加载状态
     if (loading && typeof loading.value !== 'undefined') {
         loading.value = false;
@@ -91,19 +104,30 @@ export const handleRequestError = (error, lastMessage, stateControls) => {
         isStreamLoad.value = false;
     }
     
-    // 检查是否是中断导致的错误
+    // 检查是否是中断导致的错误或消息通道关闭错误
     const isAborted = 
         errorMessage.includes('abort') || 
         errorMessage.includes('中断') || 
-        errorMessage.includes('cancel');
+        errorMessage.includes('cancel') ||
+        errorMessage.includes('BodyStreamBuffer was aborted') ||
+        errorMessage.includes('message channel closed') ||
+        errorMessage.includes('listener indicated an asynchronous response') ||
+        error?.name === 'AbortError';
     
     if (isAborted) {
         // 处理中断状态
         if (lastMessage) {
-            if (!lastMessage.content || lastMessage.content.trim() === '') {
+            if (!lastMessage.content || lastMessage.content === '') {
                 lastMessage.content = '回复已中断';
             } else if (!lastMessage.content.includes('[已中断]')) {
                 lastMessage.content += ' [已中断]';
+            }
+            
+            // 处理思考状态
+            if (lastMessage.reasoning === '思考中...') {
+                lastMessage.reasoning = '思考过程已中断';
+            } else if (lastMessage.reasoning && !lastMessage.reasoning.includes('已中断')) {
+                lastMessage.reasoning += ' [已中断]';
             }
         }
     } else if (lastMessage) {
@@ -133,12 +157,19 @@ export const handleRequestComplete = (isOk, msg, lastMessage, stateControls, con
     }
     
     // 检查是否是中断导致的完成
-    const isAborted = !isOk && (msg && (msg.includes('abort') || msg.includes('中断') || msg.includes('cancel')));
+    const isAborted = !isOk && (msg && (
+        msg.includes('abort') || 
+        msg.includes('中断') || 
+        msg.includes('cancel') ||
+        msg.includes('BodyStreamBuffer was aborted') ||
+        msg.includes('message channel closed') ||
+        msg.includes('listener indicated an asynchronous response')
+    ));
     
     // 确保lastMessage存在再进行操作
     if (lastMessage) {
         if (isAborted) {
-            if (!lastMessage.content || lastMessage.content.trim() === '') {
+            if (!lastMessage.content || lastMessage.content === '') {
                 lastMessage.content = '回复已中断';
             } else if (!lastMessage.content.includes('[已中断]')) {
                 lastMessage.content += ' [已中断]';
@@ -146,14 +177,6 @@ export const handleRequestComplete = (isOk, msg, lastMessage, stateControls, con
         } else if (!isOk || !lastMessage.content) {
             lastMessage.role = 'error';
             lastMessage.content = msg || '请求失败';
-        } else {
-            // 确保最终内容格式正确
-            if (lastMessage.reasoning) {
-                lastMessage.reasoning = lastMessage.reasoning.trim();
-            }
-            if (lastMessage.content) {
-                lastMessage.content = lastMessage.content.trim();
-            }
         }
     }
     
@@ -168,7 +191,12 @@ export const handleRequestComplete = (isOk, msg, lastMessage, stateControls, con
     
     // 清空中断函数，防止内存泄漏
     if (fetchCancel && typeof fetchCancel?.value !== 'undefined') {
-        fetchCancel.value = null;
+        // 确保中断函数存在且未执行过时再尝试设置为null
+        try {
+            fetchCancel.value = null;
+        } catch (error) {
+            console.warn('清空中断函数时出错:', error);
+        }
     }
 };
 

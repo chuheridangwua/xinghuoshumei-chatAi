@@ -10,3 +10,32 @@ p {
     margin-top: 0 !important;
     margin-bottom: 0 !important;
 }
+
+/* 移除Markdown标题(h1-h6)的上下边距 - 使用更具体和更高优先级的选择器 */
+/* 直接针对TDesign组件选择器 */
+.t-chat-content h1,
+.t-chat-content h2,
+.t-chat-content h3,
+.t-chat-content h4,
+.t-chat-content h5,
+.t-chat-content h6,
+.t-chat__content h1,
+.t-chat__content h2,
+.t-chat__content h3,
+.t-chat__content h4,
+.t-chat__content h5,
+.t-chat__content h6 {
+    margin-top: 0 !important;
+    margin-bottom: 8px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    line-height: normal !important;
+}
+
+/* 针对全局标题，确保覆盖所有可能的情况 */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 0 !important;
+    margin-bottom: 8px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
