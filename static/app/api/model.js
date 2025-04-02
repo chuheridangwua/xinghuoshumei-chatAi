@@ -46,7 +46,7 @@ export const getConversationList = async (options = {}) => {
     const model = getModelInstance();
     const userId = ensureUserId();
 
-    console.log('获取会话列表，用户ID:', userId);
+    // console.log('获取会话列表，用户ID:', userId);
 
     try {
         // 构建URL参数
@@ -68,7 +68,7 @@ export const getConversationList = async (options = {}) => {
             url.searchParams.append('sort_by', options.sort_by);
         }
         
-        console.log('请求URL:', url.toString());
+        // console.log('请求URL:', url.toString());
 
         const response = await fetch(url, {
             method: 'GET',
@@ -84,7 +84,7 @@ export const getConversationList = async (options = {}) => {
         }
 
         const data = await response.json();
-        console.log('会话列表数据:', data);
+        // console.log('会话列表数据:', data);
         
         // 按时间顺序排序会话，最新的在前面
         if (data && Array.isArray(data.data)) {
@@ -115,7 +115,7 @@ export const getConversationHistory = async (conversationId, options = {}) => {
     
     const { page = 1, pageSize = 20 } = options;
     
-    console.log('获取会话历史, 会话ID:', conversationId, '用户ID:', userId);
+    // console.log('获取会话历史, 会话ID:', conversationId, '用户ID:', userId);
     
     try {
         const url = new URL(`${model.baseURL}/messages`);
@@ -138,7 +138,7 @@ export const getConversationHistory = async (conversationId, options = {}) => {
         }
 
         const data = await response.json();
-        console.log('会话历史数据:', data);
+        // console.log('会话历史数据:', data);
         return data;
     } catch (error) {
         console.error('获取会话历史错误:', error);
@@ -163,12 +163,12 @@ export const sendChatRequest = async (messages, options = {}) => {
     // 获取conversation_id（如果存在）
     const conversation_id = options.conversation_id || '';
     
-    console.log('发送到Dify API的请求:', {
-        query,
-        conversation_id,
-        user: userId,
-        response_mode: "streaming"
-    });
+    // console.log('发送到Dify API的请求:', {
+    //     query,
+    //     conversation_id,
+    //     user: userId,
+    //     response_mode: "streaming"
+    // });
 
     // 创建请求对象
     const requestBody = {

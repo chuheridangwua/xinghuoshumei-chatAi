@@ -138,7 +138,6 @@ onMounted(() => {
     // 初始化主题（默认或者根据系统偏好）
     initTheme();
     // document.documentElement.setAttribute('theme-mode', 'light');
-    console.log('页面加载');
     initChatData();
 });
 
@@ -183,9 +182,6 @@ const groupedConversations = computed(() => {
         const updateDate = new Date(updateTime);
         updateDate.setHours(0, 0, 0, 0);
 
-        // 调试输出
-        console.log(`对话ID: ${conversation.id}, 时间戳: ${conversation.updated_at}, 日期: ${updateDate.toISOString()}`);
-
         if (updateDate.getTime() === today.getTime()) {
             groups.today.push(conversation);
         } else if (updateDate.getTime() === yesterday.getTime()) {
@@ -197,14 +193,6 @@ const groupedConversations = computed(() => {
         }
     });
 
-    // 调试输出
-    console.log('分组结果:', {
-        today: groups.today.length,
-        yesterday: groups.yesterday.length,
-        lastWeek: groups.lastWeek.length,
-        older: groups.older.length
-    });
-
     return groups;
 });
 
@@ -213,7 +201,7 @@ const initChatData = async () => {
     // 获取系统提示词
     try {
         systemPrompt.value = await loadSystemPrompt();
-        console.log('系统提示词加载成功');
+        // console.log('系统提示词加载成功');
     } catch (error) {
         console.error('系统提示词加载失败:', error);
     }
@@ -228,7 +216,7 @@ const initChatData = async () => {
         // 确保返回的数据是数组
         if (serverConversations && Array.isArray(serverConversations)) {
             conversationList.value = serverConversations;
-            console.log('服务器会话列表获取成功:', serverConversations);
+            // console.log('服务器会话列表获取成功:', serverConversations);
 
             // 判断是否还有更多对话可加载
             hasMoreConversations.value = serverConversations.length >= 20;
@@ -242,7 +230,7 @@ const initChatData = async () => {
                 // 如果没有会话，创建新会话
                 currentConversationId.value = '';
                 chatList.value = [];
-                console.log('没有现有会话，准备创建新会话');
+                // console.log('没有现有会话，准备创建新会话');
             }
         } else {
             console.error('服务器返回的会话列表数据格式不正确:', serverConversations);
@@ -260,7 +248,7 @@ const initChatData = async () => {
 
 // 加载特定对话的历史消息
 const loadConversationHistory = async (conversationId, resetPage = true) => {
-    console.log('加载对话历史消息:', conversationId);
+    // console.log('加载对话历史消息:', conversationId);
     if (!conversationId) {
         console.error('会话ID为空，无法加载历史消息');
         return false;
@@ -282,41 +270,36 @@ const loadConversationHistory = async (conversationId, resetPage = true) => {
             pageSize: pageSize.value
         };
 
-        console.log('请求服务器历史消息，参数:', options);
+        // console.log('请求服务器历史消息，参数:', options);
         const historyMessages = await getServerConversationHistory(conversationId, options);
-        console.log('获取历史消息成功，消息数量:', historyMessages.length);
-
-        // 检查每条消息的角色
-        historyMessages.forEach((msg, idx) => {
-            console.log(`消息 ${idx + 1}: 角色=${msg.role}, 内容=${msg.content && msg.content.substring(0, 30)}...`);
-        });
+        // console.log('获取历史消息成功，消息数量:', historyMessages.length);
 
         if (historyMessages.length > 0) {
             // 如果是重置，直接设置为新消息
             if (resetPage) {
                 chatList.value = historyMessages;
-                console.log('重置聊天列表，设置为新消息');
+                // console.log('重置聊天列表，设置为新消息');
             } else {
                 // 否则追加到现有消息的前面
                 chatList.value = [...historyMessages, ...chatList.value];
-                console.log('追加历史消息到现有列表前面');
+                // console.log('追加历史消息到现有列表前面');
             }
 
             // 判断是否还有更多消息
             hasMoreMessages.value = historyMessages.length >= pageSize.value;
-            console.log('是否还有更多消息:', hasMoreMessages.value);
+            // console.log('是否还有更多消息:', hasMoreMessages.value);
         } else {
             if (resetPage) {
                 chatList.value = []; // 没有消息，清空列表
-                console.log('没有历史消息，清空列表');
+                // console.log('没有历史消息，清空列表');
             }
             hasMoreMessages.value = false;
-            console.log('没有更多消息可加载');
+            // console.log('没有更多消息可加载');
         }
 
         // 保存到本地缓存
         if (chatList.value && Array.isArray(chatList.value) && chatList.value.length > 0) {
-            console.log('历史消息已加载完成');
+            // console.log('历史消息已加载完成');
         }
 
         return true;
@@ -336,13 +319,13 @@ const loadConversationHistory = async (conversationId, resetPage = true) => {
 
 // 处理对话选择
 const handleConversationSelect = async (option) => {
-    console.log('选择对话:', option);
+    // console.log('选择对话:', option);
     const value = option.value;
 
     // 处理删除选项
     if (typeof value === 'string' && value.startsWith('delete-')) {
         const conversationId = value.substring(7); // 去掉"delete-"前缀
-        console.log('准备删除对话:', conversationId);
+        // console.log('准备删除对话:', conversationId);
         
         // 显示删除确认框
         currentDeletingId.value = conversationId;
@@ -353,7 +336,7 @@ const handleConversationSelect = async (option) => {
 
     // 处理新对话选项
     if (value === 'new') {
-        console.log('创建新对话');
+        // console.log('创建新对话');
         // 重置会话状态
         resetConversation();
         currentConversationId.value = '';
@@ -402,12 +385,12 @@ const backBottom = () => {
 
 // 处理思考内容
 const handleChange = (value, { index }) => {
-    console.log('handleChange', value, index);
+    // console.log('handleChange', value, index);
 };
 
 // 清空聊天记录
 const clearConfirm = async function () {
-    console.log('清空聊天记录');
+    // console.log('清空聊天记录');
     // 清除本地存储
     await clearChatHistory();
     // 清空聊天记录
@@ -421,7 +404,7 @@ const clearConfirm = async function () {
 
 // 停止请求
 const onStop = async function () {
-    console.log('停止请求');
+    // console.log('停止请求');
     try {
         // 立即重置状态 - 先更新UI再中断请求
         loading.value = false;
@@ -436,17 +419,17 @@ const onStop = async function () {
 
         // 如果有任务ID，使用新的API停止流式响应
         if (currentTaskId.value) {
-            console.log('使用任务ID停止响应:', currentTaskId.value);
+            // console.log('使用任务ID停止响应:', currentTaskId.value);
             const userId = localStorage.getItem('dify_user_id');
             
             // 先发送停止请求
             const stopResult = await stopStreamResponse(currentTaskId.value, userId);
-            console.log('停止响应结果:', stopResult);
+            // console.log('停止响应结果:', stopResult);
             
             // 无论成功失败，都尝试使用AbortController中断
             if (fetchCancel.value) {
                 try {
-                    console.log('执行中断请求');
+                    // console.log('执行中断请求');
                     fetchCancel.value();
                 } catch (abortError) {
                     console.error('中断请求时出错:', abortError);
@@ -461,7 +444,7 @@ const onStop = async function () {
             // 没有任务ID时，使用原来的方式中断
             if (fetchCancel.value) {
                 try {
-                    console.log('执行中断请求');
+                    // console.log('执行中断请求');
                     fetchCancel.value();
                 } catch (abortError) {
                     console.error('中断请求时出错:', abortError);
@@ -483,7 +466,8 @@ const onStop = async function () {
 
 // 用户操作
 const handleOperation = function (type, options) {
-    console.log('执行操作:', type, options);
+    // 删除调试输出
+    // console.log('执行操作:', type, options);
     // 确保options存在并提取index
     const index = options.index;
 
@@ -501,54 +485,54 @@ const handleOperation = function (type, options) {
 
 // 用户输入
 const inputEnter = function (inputValue) {
-    console.log('用户输入:', inputValue);
+    // console.log('用户输入:', inputValue);
     if (isStreamLoad.value) {
-        console.log('当前正在流式加载中，忽略输入');
+        // console.log('当前正在流式加载中，忽略输入');
         return;
     }
     if (!inputValue) {
-        console.log('输入为空，忽略');
+        // console.log('输入为空，忽略');
         return;
     }
 
     // 添加用户消息
     const userMessage = createUserMessage(inputValue);
-    console.log('添加用户消息:', userMessage);
+    // console.log('添加用户消息:', userMessage);
     chatList.value.unshift(userMessage);
 
     // 添加助手消息（空消息占位）
     // 默认启用推理展示功能，如果API不返回推理内容，也不会显示
     const assistantMessage = createAssistantMessage(true);
-    console.log('添加占位消息:', assistantMessage);
+    // console.log('添加占位消息:', assistantMessage);
     chatList.value.unshift(assistantMessage);
 
     // 发送请求
-    console.log('开始处理模型请求');
+    // console.log('开始处理模型请求');
     handleModelRequest(inputValue);
 };
 
 // 处理模型请求
 const handleModelRequest = async (inputValue) => {
-    console.log('处理模型请求，输入值:', inputValue);
+    // console.log('处理模型请求，输入值:', inputValue);
     loading.value = true;
     isStreamLoad.value = true;
     firstTokenReceived.value = false;
     currentTaskId.value = null; // 重置任务ID
     currentMessageId.value = null; // 重置消息ID
     const lastItem = chatList.value[0];
-    console.log('最后一条消息:', lastItem);
+    // console.log('最后一条消息:', lastItem);
 
     // 构建消息历史，确保使用正确的当前消息
     const currentUserMessage = chatList.value[1]?.role === 'user' ? chatList.value[1].content : inputValue;
-    console.log('当前用户消息:', currentUserMessage);
+    // console.log('当前用户消息:', currentUserMessage);
     
     const messages = buildMessageHistory(chatList.value, currentUserMessage, systemPrompt.value);
-    console.log('最终发送的消息历史:', messages);
+    // console.log('最终发送的消息历史:', messages);
 
     // 创建请求控制器和超时保护
     const { controller, signal, abortRequest } = createRequestController();
     fetchCancel.value = abortRequest;
-    console.log('创建AbortController');
+    // console.log('创建AbortController');
 
     // 设置超时保护，防止请求无响应
     const timeoutId = createTimeoutProtection(abortRequest);
@@ -560,7 +544,7 @@ const handleModelRequest = async (inputValue) => {
             conversation_id: currentConversationId.value || ''
         };
 
-        console.log('使用会话ID:', requestOptions.conversation_id);
+        // console.log('使用会话ID:', requestOptions.conversation_id);
 
         await chatWithModel(
             messages,
@@ -569,13 +553,13 @@ const handleModelRequest = async (inputValue) => {
                 onReasoning: (reasoningText) => {
                     // 检查是否已中断 - 通过检查loading状态替代直接检查signal
                     if (!loading.value || !isStreamLoad.value) {
-                        console.log('请求已中断或已完成，不再处理思考内容');
+                        // console.log('请求已中断或已完成，不再处理思考内容');
                         return;
                     }
 
-                    console.log('收到思考内容:', reasoningText);
+                    // console.log('收到思考内容:', reasoningText);
                     if (!firstTokenReceived.value) {
-                        console.log('首次收到token');
+                        // console.log('首次收到token');
                         firstTokenReceived.value = true;
                     }
 
@@ -583,10 +567,10 @@ const handleModelRequest = async (inputValue) => {
                     try {
                         // 如果是首次收到思考内容，则替换"思考中..."
                         if (!lastItem.reasoning || lastItem.reasoning === '思考中...') {
-                            console.log('首次收到思考内容，替换"思考中..."');
+                            // console.log('首次收到思考内容，替换"思考中..."');
                             lastItem.reasoning = reasoningText || '';
                         } else {
-                            console.log('追加思考内容');
+                            // console.log('追加思考内容');
                             // 否则追加思考内容
                             lastItem.reasoning = (lastItem.reasoning || '') + (reasoningText || '');
                         }
@@ -604,13 +588,13 @@ const handleModelRequest = async (inputValue) => {
                 onMessage: (content) => {
                     // 检查是否已中断 - 通过检查loading状态替代直接检查signal
                     if (!loading.value || !isStreamLoad.value) {
-                        console.log('请求已中断或已完成，不再处理消息内容');
+                        // console.log('请求已中断或已完成，不再处理消息内容');
                         return;
                     }
 
-                    console.log('收到消息内容:', content);
+                    // console.log('收到消息内容:', content);
                     if (!firstTokenReceived.value) {
-                        console.log('首次收到token');
+                        // console.log('首次收到token');
                         firstTokenReceived.value = true;
                     }
                     try {
@@ -640,28 +624,28 @@ const handleModelRequest = async (inputValue) => {
                 },
                 // 会话ID变更处理
                 onConversationIdChange: (newId) => {
-                    console.log('接收到新会话ID:', newId);
+                    // console.log('接收到新会话ID:', newId);
                     if (newId && !currentConversationId.value) {
                         currentConversationId.value = newId;
                     }
                 },
                 // 任务ID变更处理
                 onTaskIdChange: (newTaskId) => {
-                    console.log('接收到任务ID:', newTaskId);
+                    // console.log('接收到任务ID:', newTaskId);
                     if (newTaskId) {
                         currentTaskId.value = newTaskId;
                     }
                 },
                 // 消息ID变更处理
                 onMessageIdChange: (newMessageId) => {
-                    console.log('接收到消息ID:', newMessageId);
+                    // console.log('接收到消息ID:', newMessageId);
                     if (newMessageId) {
                         currentMessageId.value = newMessageId;
                     }
                 },
                 // 请求完成
                 onComplete: async (isOk, msg) => {
-                    console.log('请求完成，状态:', isOk, '消息:', msg);
+                    // console.log('请求完成，状态:', isOk, '消息:', msg);
 
                     // 处理请求完成
                     handleRequestComplete(isOk, msg, lastItem,
@@ -683,19 +667,19 @@ const handleModelRequest = async (inputValue) => {
                     // 如果成功且有消息ID，获取建议问题列表
                     if (isOk && currentMessageId.value) {
                         try {
-                            console.log('准备获取建议问题列表，消息ID:', currentMessageId.value);
+                            // console.log('准备获取建议问题列表，消息ID:', currentMessageId.value);
                             const messageId = currentMessageId.value;
                             
                             // 延时2秒后再获取建议问题列表
-                            console.log('设置2秒延时后获取建议问题');
+                            // console.log('设置2秒延时后获取建议问题');
                             setTimeout(async () => {
                                 try {
-                                    console.log('延时2秒后开始获取建议问题列表，消息ID:', messageId);
+                                    // console.log('延时2秒后开始获取建议问题列表，消息ID:', messageId);
                                     const suggestedQuestions = await getSuggestedQuestions(messageId);
                                     if (suggestedQuestions && suggestedQuestions.length > 0) {
-                                        console.log('建议问题列表:', suggestedQuestions);
+                                        // console.log('建议问题列表:', suggestedQuestions);
                                     } else {
-                                        console.log('没有建议问题');
+                                        // console.log('没有建议问题');
                                     }
                                 } catch (delayedError) {
                                     console.error('延时获取建议问题出错:', delayedError);
@@ -716,7 +700,7 @@ const handleModelRequest = async (inputValue) => {
                         // 尝试手动触发自动重命名
                         if (currentConversationId.value) {
                             try {
-                                console.log('手动触发自动重命名检查');
+                                // console.log('手动触发自动重命名检查');
                                 await autoRenameConversationIfNeeded(currentConversationId.value);
                             } catch (error) {
                                 console.error('手动触发自动重命名失败:', error);
@@ -731,7 +715,7 @@ const handleModelRequest = async (inputValue) => {
                             });
                             if (serverConversations && Array.isArray(serverConversations)) {
                                 conversationList.value = serverConversations;
-                                console.log('更新会话列表成功');
+                                // console.log('更新会话列表成功');
                             }
                         } catch (error) {
                             console.error('更新会话列表失败:', error);
@@ -784,13 +768,13 @@ const loadMoreConversations = async () => {
         if (moreConversations && Array.isArray(moreConversations) && moreConversations.length > 0) {
             // 合并会话列表
             conversationList.value = [...conversationList.value, ...moreConversations];
-            console.log('加载更多会话成功，数量:', moreConversations.length);
+            // console.log('加载更多会话成功，数量:', moreConversations.length);
 
             // 判断是否还有更多对话可加载
             hasMoreConversations.value = moreConversations.length >= 20;
         } else {
             hasMoreConversations.value = false;
-            console.log('没有更多会话可加载');
+            // console.log('没有更多会话可加载');
         }
     } catch (error) {
         console.error('加载更多会话失败:', error);
@@ -801,7 +785,7 @@ const loadMoreConversations = async () => {
 
 // 处理新建对话
 const handleNewConversation = () => {
-    console.log('创建新对话');
+    // console.log('创建新对话');
     // 重置会话状态
     resetConversation();
     currentConversationId.value = '';
@@ -812,12 +796,12 @@ const handleNewConversation = () => {
 
 // 处理对话重命名
 const handleRenameConversation = async ({ conversationId, name }) => {
-    console.log('重命名对话:', conversationId, name);
+    // console.log('重命名对话:', conversationId, name);
 
     try {
         // 调用重命名API
         const result = await renameConversation(conversationId, { name });
-        console.log('重命名成功:', result);
+        // console.log('重命名成功:', result);
 
         // 更新本地会话列表中的名称
         conversationList.value = conversationList.value.map(conversation => {
@@ -838,7 +822,7 @@ const handleRenameConversation = async ({ conversationId, name }) => {
 
 // 处理对话置顶
 const handlePinConversation = ({ conversationId }) => {
-    console.log('置顶对话:', conversationId);
+    // console.log('置顶对话:', conversationId);
 
     // 查找要置顶的对话
     const conversation = conversationList.value.find(c => c.id === conversationId);
@@ -898,7 +882,7 @@ const confirmDelete = async () => {
     try {
         // 调用API删除对话
         const result = await deleteConversation(currentDeletingId.value);
-        console.log('服务器删除对话成功:', result);
+        // console.log('服务器删除对话成功:', result);
         
         // 从本地列表中移除
         conversationList.value = conversationList.value.filter(c => c.id !== currentDeletingId.value);

@@ -12,7 +12,7 @@ export const createRequestController = () => {
     
     // 创建中断函数
     const abortRequest = () => {
-        console.log('执行中断请求');
+        // console.log('执行中断请求');
         controller.abort();
     };
     
@@ -31,7 +31,7 @@ export const createRequestController = () => {
  */
 export const createTimeoutProtection = (abortFunction, timeout = 30000) => {
     return setTimeout(() => {
-        console.log('请求超时，自动中断');
+        // console.log('请求超时，自动中断');
         if (typeof abortFunction === 'function') {
             abortFunction();
         }
@@ -187,7 +187,7 @@ export const stopStreamResponse = async (taskId, userId) => {
     }
 
     try {
-        console.log(`发送停止响应请求: taskId=${taskId}, userId=${userId}`);
+        // console.log(`发送停止响应请求: taskId=${taskId}, userId=${userId}`);
         
         // 使用统一的API配置
         const baseURL = 'http://192.168.79.122:8083/v1';
@@ -199,20 +199,22 @@ export const stopStreamResponse = async (taskId, userId) => {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${apiKey}`
             },
-            body: JSON.stringify({ user: userId })
+            body: JSON.stringify({
+                user: userId
+            })
         });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`停止响应请求失败: ${response.status} ${errorText}`);
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            // console.log('成功停止响应:', result);
+            return true;
+        } else {
+            console.error('停止响应请求失败:', result);
             return false;
         }
-
-        const result = await response.json();
-        console.log('停止响应请求成功:', result);
-        return result && result.result === 'success';
     } catch (error) {
-        console.error('停止响应请求出错:', error);
+        console.error('停止响应请求错误:', error);
         return false;
     }
 }; 

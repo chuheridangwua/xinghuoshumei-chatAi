@@ -20,8 +20,6 @@ export function setThemeMode(mode) {
   
   document.documentElement.setAttribute('theme-mode', mode);
   localStorage.setItem('theme-mode', mode);
-  
-  console.log(`Theme switched to ${mode} mode`);
 }
 
 /**
