@@ -259,43 +259,78 @@ export const getChatHistory = async (conversationId, options = {}) => {
  * @returns {Array} 格式化后的消息历史
  */
 export const buildMessageHistory = (chatList, currentMessage, systemPrompt, messageLimit = 10) => {
-    console.log('构建消息历史');
+    console.log('构建消息历史, 当前消息:', currentMessage);
     // 构建消息历史
     let hasSystemPrompt = false;
     let messagesToSend = [];
+    
+    // 对于新消息，先确保我们明确知道当前的用户消息是什么
+    // 由于消息存储是倒序的，最新的用户消息应该在chatList的最前面（或者是currentMessage参数）
+    let currentUserMessage = currentMessage;
+    
+    // 如果currentMessage为空，但chatList中有内容，则尝试从chatList获取最新用户消息
+    if (!currentUserMessage && chatList && chatList.length > 0) {
+        // 查找最新的用户消息（在chatList的前面）
+        for (let i = 0; i < chatList.length; i++) {
+            if (chatList[i].role === 'user' && chatList[i].content.trim() !== '') {
+                currentUserMessage = chatList[i].content;
+                console.log('从chatList获取到用户最新消息:', currentUserMessage);
+                break;
+            }
+        }
+    }
+    
+    console.log('最终确定的当前用户消息:', currentUserMessage);
 
-    // 遍历聊天记录，只添加用户和助手的消息，过滤掉空消息
-    for (const item of chatList) {
+    // 首先从chatList构建历史消息，但跳过最新的用户消息，因为我们会单独添加它
+    let processedMessages = new Set(); // 用于跟踪已处理过的消息
+    
+    // 按照对话顺序处理消息（由于chatList是倒序的，我们需要反转处理）
+    for (let i = chatList.length - 1; i >= 0; i--) {
+        const item = chatList[i];
+        
         // 只考虑角色是用户、助手或系统且内容不为空的消息
         if ((item.role === 'user' || item.role === 'assistant' || item.role === 'system') && item.content.trim() !== '') {
+            // 如果是用户消息，且与当前用户消息相同，则跳过，因为我们会在最后添加当前消息
+            if (item.role === 'user' && item.content === currentUserMessage) {
+                console.log('跳过已有的当前用户消息');
+                continue;
+            }
+            
             // 检查是否已经包含系统提示词
             if (item.role === 'system') {
                 hasSystemPrompt = true;
             }
-
-            messagesToSend.push({
-                role: item.role,
-                content: item.content
-            });
+            
+            // 将消息内容作为唯一键，防止重复
+            const messageKey = `${item.role}:${item.content}`;
+            if (!processedMessages.has(messageKey)) {
+                messagesToSend.push({
+                    role: item.role,
+                    content: item.content
+                });
+                processedMessages.add(messageKey);
+            }
         }
     }
 
-    // 添加当前的用户消息（只添加一次，避免重复）
-    if (currentMessage && currentMessage.trim() !== '') {
-        // 先检查是否已经添加过当前用户消息
-        const lastUserMessageIndex = messagesToSend.findIndex(msg =>
-            msg.role === 'user' && msg.content === currentMessage);
-
-        if (lastUserMessageIndex === -1) { // 如果没有添加过，才添加
+    // 添加当前的用户消息（确保只添加一次）
+    if (currentUserMessage && currentUserMessage.trim() !== '') {
+        const messageKey = `user:${currentUserMessage}`;
+        if (!processedMessages.has(messageKey)) {
             messagesToSend.push({
                 role: 'user',
-                content: currentMessage
+                content: currentUserMessage
             });
+            console.log('添加当前用户消息:', currentUserMessage);
         }
     }
 
     // 限制只取最近指定数量条消息
-    messagesToSend = messagesToSend.slice(-messageLimit);
+    if (messagesToSend.length > messageLimit) {
+        console.log(`消息数量超过限制(${messageLimit})，裁剪历史消息`);
+        messagesToSend = messagesToSend.slice(-messageLimit);
+    }
 
     // 如果消息中没有系统提示词，且系统提示词存在，则添加到最前面
     if (!hasSystemPrompt && systemPrompt) {
@@ -304,7 +339,8 @@ export const buildMessageHistory = (chatList, currentMessage, systemPrompt, mess
             content: systemPrompt
         });
     }
-
+    
+    console.log('最终构建的消息历史:', messagesToSend);
     return messagesToSend;
 };
 
@@ -438,6 +474,7 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
         let isInThinkingMode = false; // 追踪是否在思考模式中
         let conversation_id = null; // 存储会话ID
         let task_id = null; // 存储任务ID
+        let message_id = null; // 存储消息ID
 
         while (true) {
             // 检查是否请求已被中断（AbortController信号）
@@ -448,25 +485,25 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
             }
 
             const { done, value } = await reader.read();
-
+            
             if (done) {
                 break;
             }
 
             // 解码接收到的数据
             buffer += decoder.decode(value, { stream: true });
-
+            
             // 处理缓冲区中的数据行
             const lines = buffer.split('\n');
             buffer = lines.pop() || ''; // 最后一行可能不完整，保留到下一次
 
             for (const line of lines) {
                 if (!line.trim() || !line.startsWith('data: ')) continue;
-
+                
                 try {
                     const data = JSON.parse(line.substring(6));
                     console.log('收到数据:', data);
-
+                    
                     // 保存会话ID
                     if (data.conversation_id && !conversation_id) {
                         conversation_id = data.conversation_id;
@@ -476,7 +513,7 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
                             callbacks.onConversationIdChange(conversation_id);
                         }
                     }
-
+                    
                     // 保存任务ID
                     if (data.task_id && !task_id) {
                         task_id = data.task_id;
@@ -486,11 +523,21 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
                             callbacks.onTaskIdChange(task_id);
                         }
                     }
-
+                    
+                    // 保存消息ID
+                    if (data.id && !message_id) {
+                        message_id = data.id;
+                        console.log('捕获到消息ID:', message_id);
+                        // 使用回调通知上层组件
+                        if (callbacks.onMessageIdChange) {
+                            callbacks.onMessageIdChange(message_id);
+                        }
+                    }
+                    
                     // 处理Dify API返回格式
                     if (data.event === 'message') {
                         const answer = data.answer || '';
-
+                        
                         // 检查是否包含思考过程
                         if (answer.includes('<think>')) {
                             isInThinkingMode = true;
@@ -503,9 +550,9 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
                             if (parts[0].trim()) {
                                 onReasoning?.(parts[0]);
                             }
-
+                            
                             isInThinkingMode = false;
-
+                            
                             if (parts.length > 1 && parts[1].trim()) {
                                 onMessage?.(parts[1]);
                             }
@@ -518,7 +565,17 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
                         }
                     } else if (data.event === 'message_end') {
                         console.log('消息完成:', data);
-
+                        
+                        // 最后确认消息ID
+                        if (data.id && !message_id) {
+                            message_id = data.id;
+                            console.log('消息结束时捕获到消息ID:', message_id);
+                            // 使用回调通知上层组件
+                            if (callbacks.onMessageIdChange) {
+                                callbacks.onMessageIdChange(message_id);
+                            }
+                        }
+                        
                         // 如果有会话ID，在消息结束时执行自动重命名的检查
                         if (conversation_id) {
                             autoRenameConversationIfNeeded(conversation_id);
@@ -828,4 +885,50 @@ export const clearChatHistory = async (conversationId) => {
 export const saveChatHistory = (chatList) => {
     console.log('保存聊天记录请求已忽略，聊天历史数据现已从服务器获取');
     return Promise.resolve(true);
+};
+
+/**
+ * 获取下一轮建议问题列表
+ * @param {String} messageId - 消息ID
+ * @returns {Promise<Array<String>>} 建议问题列表
+ */
+export const getSuggestedQuestions = async (messageId) => {
+    if (!messageId) {
+        console.error('获取建议问题失败: messageId不能为空');
+        return [];
+    }
+
+    try {
+        const userId = ensureUserId();
+        console.log(`获取建议问题: messageId=${messageId}, userId=${userId}`);
+        
+        const url = new URL(`${MODEL_CONFIG.baseURL}/messages/${messageId}/suggested`);
+        url.searchParams.append('user', userId);
+        
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${MODEL_CONFIG.apiKey}`
+            }
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`获取建议问题失败: ${response.status} ${errorText}`);
+            return [];
+        }
+
+        const result = await response.json();
+        console.log('获取建议问题成功:', result);
+        
+        if (result && result.result === 'success' && Array.isArray(result.data)) {
+            return result.data;
+        }
+        
+        return [];
+    } catch (error) {
+        console.error('获取建议问题出错:', error);
+        return [];
+    }
 };

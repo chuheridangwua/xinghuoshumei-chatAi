@@ -61,7 +61,8 @@ import {
     renameConversation,
     deleteConversation,
     getCurrentConversation,
-    autoRenameConversationIfNeeded
+    autoRenameConversationIfNeeded,
+    getSuggestedQuestions
 } from '/static/app/api/chat.js';
 import {
     createRequestController,
@@ -130,6 +131,8 @@ const currentDeletingId = ref('');
 
 // 添加变量保存当前任务ID
 const currentTaskId = ref(null);
+// 添加变量保存当前消息ID
+const currentMessageId = ref('');
 
 onMounted(() => {
     // 初始化主题（默认或者根据系统偏好）
@@ -531,11 +534,15 @@ const handleModelRequest = async (inputValue) => {
     isStreamLoad.value = true;
     firstTokenReceived.value = false;
     currentTaskId.value = null; // 重置任务ID
+    currentMessageId.value = null; // 重置消息ID
     const lastItem = chatList.value[0];
     console.log('最后一条消息:', lastItem);
 
-    // 构建消息历史
-    const messages = buildMessageHistory(chatList.value, inputValue, systemPrompt.value);
+    // 构建消息历史，确保使用正确的当前消息
+    const currentUserMessage = chatList.value[1]?.role === 'user' ? chatList.value[1].content : inputValue;
+    console.log('当前用户消息:', currentUserMessage);
+    
+    const messages = buildMessageHistory(chatList.value, currentUserMessage, systemPrompt.value);
     console.log('最终发送的消息历史:', messages);
 
     // 创建请求控制器和超时保护
@@ -645,6 +652,13 @@ const handleModelRequest = async (inputValue) => {
                         currentTaskId.value = newTaskId;
                     }
                 },
+                // 消息ID变更处理
+                onMessageIdChange: (newMessageId) => {
+                    console.log('接收到消息ID:', newMessageId);
+                    if (newMessageId) {
+                        currentMessageId.value = newMessageId;
+                    }
+                },
                 // 请求完成
                 onComplete: async (isOk, msg) => {
                     console.log('请求完成，状态:', isOk, '消息:', msg);
@@ -664,6 +678,37 @@ const handleModelRequest = async (inputValue) => {
                         // await saveChatHistory(chatList.value);
                     } else {
                         console.error('聊天列表无效');
+                    }
+
+                    // 如果成功且有消息ID，获取建议问题列表
+                    if (isOk && currentMessageId.value) {
+                        try {
+                            console.log('准备获取建议问题列表，消息ID:', currentMessageId.value);
+                            const messageId = currentMessageId.value;
+                            
+                            // 延时2秒后再获取建议问题列表
+                            console.log('设置2秒延时后获取建议问题');
+                            setTimeout(async () => {
+                                try {
+                                    console.log('延时2秒后开始获取建议问题列表，消息ID:', messageId);
+                                    const suggestedQuestions = await getSuggestedQuestions(messageId);
+                                    if (suggestedQuestions && suggestedQuestions.length > 0) {
+                                        console.log('建议问题列表:', suggestedQuestions);
+                                    } else {
+                                        console.log('没有建议问题');
+                                    }
+                                } catch (delayedError) {
+                                    console.error('延时获取建议问题出错:', delayedError);
+                                }
+                            }, 2000);
+                            
+                            // 清除消息ID
+                            currentMessageId.value = null;
+                        } catch (error) {
+                            console.error('设置延时获取建议问题出错:', error);
+                            // 出错时也要清除消息ID
+                            currentMessageId.value = null;
+                        }
                     }
 
                     // 如果是新会话，需要更新当前会话ID并刷新会话列表

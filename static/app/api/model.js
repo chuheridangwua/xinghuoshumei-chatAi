@@ -293,6 +293,17 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
                         }
                     } else if (data.event === 'message_end') {
                         console.log('消息完成:', data);
+                        
+                        // 消息结束时，只保存消息ID，不直接获取建议问题
+                        if (data.message_id && callbacks.onMessageIdChange) {
+                            // 通知消息ID变更
+                            callbacks.onMessageIdChange(data.message_id);
+                        }
+                        
+                        // 保存任务ID
+                        if (data.task_id && callbacks.onTaskIdChange) {
+                            callbacks.onTaskIdChange(data.task_id);
+                        }
                     }
                 } catch (e) {
                     console.error('解析流数据失败:', e, line);
