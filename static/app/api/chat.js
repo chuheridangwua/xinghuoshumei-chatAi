@@ -133,10 +133,8 @@ const extractThinkingContent = (content) => {
  * @returns {Promise<Array>} 会话历史消息数组
  */
 export const getServerConversationHistory = async (conversationId, options = {}) => {
-    // console.log('获取服务器会话历史', conversationId, options);
     try {
         const userId = ensureUserId();
-        // console.log('获取会话历史, 会话ID:', conversationId, '用户ID:', userId);
 
         const { page = 1, pageSize = 20 } = options;
 
@@ -160,11 +158,8 @@ export const getServerConversationHistory = async (conversationId, options = {})
         }
 
         const data = await response.json();
-        // console.log('会话历史数据:', data);
 
         if (data && data.data && Array.isArray(data.data)) {
-            // console.log('获取会话历史成功，消息数量:', data.data.length);
-
             // 结果数组，将包含格式化后的消息
             const formattedMessages = [];
 
@@ -199,19 +194,11 @@ export const getServerConversationHistory = async (conversationId, options = {})
                 }
             }
 
-            // 日志输出消息统计信息
-            // const userCount = formattedMessages.filter(msg => msg.role === 'user').length;
-            // const assistantCount = formattedMessages.filter(msg => msg.role === 'assistant').length;
-            // console.log(`消息统计: 用户消息=${userCount}, 助手消息=${assistantCount}, 总计=${formattedMessages.length}`);
-
             // 后端API是倒序返回的(最新的在前面)，但前端显示需要正序，所以需要反转
             formattedMessages.reverse();
 
-            // console.log('格式化后的消息:', formattedMessages);
-
             return formattedMessages;
         } else {
-            // console.log('会话历史为空或格式不正确');
             return [];
         }
     } catch (error) {
@@ -227,10 +214,7 @@ export const getServerConversationHistory = async (conversationId, options = {})
  * @returns {Promise<Array>} 聊天历史数组
  */
 export const getChatHistory = async (conversationId, options = {}) => {
-    // console.log('获取聊天记录');
-
     if (!conversationId) {
-        // console.log('没有有效的会话ID，无法获取聊天记录');
         return [];
     }
 
@@ -238,10 +222,8 @@ export const getChatHistory = async (conversationId, options = {}) => {
         // 从服务器获取会话历史
         const messages = await getServerConversationHistory(conversationId, options);
         if (messages && messages.length > 0) {
-            // console.log('获取聊天记录成功', messages.length);
             return messages;
         } else {
-            // console.log('聊天记录为空');
             return [];
         }
     } catch (err) {
@@ -259,7 +241,6 @@ export const getChatHistory = async (conversationId, options = {}) => {
  * @returns {Array} 格式化后的消息历史
  */
 export const buildMessageHistory = (chatList, currentMessage, systemPrompt, messageLimit = 10) => {
-    // console.log('构建消息历史, 当前消息:', currentMessage);
     // 构建消息历史
     let hasSystemPrompt = false;
     let messagesToSend = [];
@@ -274,14 +255,11 @@ export const buildMessageHistory = (chatList, currentMessage, systemPrompt, mess
         for (let i = 0; i < chatList.length; i++) {
             if (chatList[i].role === 'user' && chatList[i].content.trim() !== '') {
                 currentUserMessage = chatList[i].content;
-                // console.log('从chatList获取到用户最新消息:', currentUserMessage);
                 break;
             }
         }
     }
     
-    // console.log('最终确定的当前用户消息:', currentUserMessage);
-
     // 首先从chatList构建历史消息，但跳过最新的用户消息，因为我们会单独添加它
     let processedMessages = new Set(); // 用于跟踪已处理过的消息
     
@@ -293,7 +271,6 @@ export const buildMessageHistory = (chatList, currentMessage, systemPrompt, mess
         if ((item.role === 'user' || item.role === 'assistant' || item.role === 'system') && item.content.trim() !== '') {
             // 如果是用户消息，且与当前用户消息相同，则跳过，因为我们会在最后添加当前消息
             if (item.role === 'user' && item.content === currentUserMessage) {
-                // console.log('跳过已有的当前用户消息');
                 continue;
             }
             
@@ -322,7 +299,6 @@ export const buildMessageHistory = (chatList, currentMessage, systemPrompt, mess
                 role: 'user',
                 content: currentUserMessage
             });
-            // console.log('添加当前用户消息:', currentUserMessage);
         }
     }
 
@@ -340,7 +316,6 @@ export const buildMessageHistory = (chatList, currentMessage, systemPrompt, mess
         });
     }
     
-    // console.log('最终构建的消息历史:', messagesToSend);
     return messagesToSend;
 };
 
@@ -349,7 +324,6 @@ export const buildMessageHistory = (chatList, currentMessage, systemPrompt, mess
  * @param {Object} chatRef - 聊天容器的引用
  */
 export const scrollToBottom = (chatRef) => {
-    // console.log('执行滚动到底部操作');
     if (chatRef) {
         chatRef.scrollToBottom({
             behavior: 'smooth',
@@ -652,37 +626,6 @@ export const autoRenameConversationIfNeeded = async (conversationId) => {
         }
     } catch (error) {
         console.error('自动重命名失败:', error);
-    }
-};
-
-/**
- * 封装的请求方法
- * @param {Array} messages - 消息数组
- * @param {Object} callbacks - 回调函数
- * @param {Object} options - 其他选项
- * @returns {Object} 请求结果
- */
-export const chatWithModel = async (messages, callbacks = {}, options = {}) => {
-    try {
-        // 使用传入的conversation_id，不再从localStorage获取
-        const conversationId = options.conversation_id || '';
-        const requestOptions = {
-            ...options,
-            conversation_id: conversationId
-        };
-
-        console.log('使用会话ID:', conversationId);
-
-        // 发送请求
-        const responsePromise = sendChatRequest(messages, requestOptions);
-        await handleStreamResponse(responsePromise, callbacks);
-
-        return { success: true };
-    } catch (error) {
-        console.error('聊天请求错误:', error);
-        callbacks.onError?.(error.message || '请求失败');
-        callbacks.onComplete?.(false, error.message);
-        return { success: false, error };
     }
 };
 

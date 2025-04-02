@@ -67,15 +67,10 @@ defineEmits(['open-drawer', 'new-conversation']);
         color: $text-color-primary;
         font-weight: 500;
         text-align: center;
-        max-width: 60%;
+        max-width: 80%;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-
-        @media (max-width: 768px) {
-            font-size: $font-size-body-small;
-            max-width: 50%;
-        }
     }
 }
 

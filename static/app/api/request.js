@@ -12,7 +12,6 @@ export const createRequestController = () => {
     
     // 创建中断函数
     const abortRequest = () => {
-        // console.log('执行中断请求');
         controller.abort();
     };
     
@@ -31,7 +30,6 @@ export const createRequestController = () => {
  */
 export const createTimeoutProtection = (abortFunction, timeout = 30000) => {
     return setTimeout(() => {
-        // console.log('请求超时，自动中断');
         if (typeof abortFunction === 'function') {
             abortFunction();
         }
@@ -187,8 +185,6 @@ export const stopStreamResponse = async (taskId, userId) => {
     }
 
     try {
-        // console.log(`发送停止响应请求: taskId=${taskId}, userId=${userId}`);
-        
         // 使用统一的API配置
         const baseURL = 'http://192.168.79.122:8083/v1';
         const apiKey = 'app-JUQYZhaSvAhw9YtuhOCo66A6';
@@ -207,7 +203,6 @@ export const stopStreamResponse = async (taskId, userId) => {
         const result = await response.json();
         
         if (response.ok) {
-            // console.log('成功停止响应:', result);
             return true;
         } else {
             console.error('停止响应请求失败:', result);
