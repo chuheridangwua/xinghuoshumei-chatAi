@@ -109,4 +109,4 @@ document.documentElement.setAttribute('theme-mode', 'light');
 - 内外边距变量
 - 圆角变量
 - 阴影变量
-- 过渡变量 
+- 过渡变量

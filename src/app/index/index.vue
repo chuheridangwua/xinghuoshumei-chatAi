@@ -1,32 +1,38 @@
 <template>
-    <t-chat class="chat-container" ref="chatRef" layout="both" :clear-history="chatList.length > 0 && !isStreamLoad"
-        @clear="clearConfirm" @scroll="handleScroll">
-        <!-- 对话列表选择器 -->
-        <template #header v-if="conversationList.length > 0">
+    <div class="app-container">
+        <!-- 添加固定的头部导航栏 -->
+        <div class="fixed-header">
             <t-dropdown :options="conversationOptions" @click="handleConversationSelect" class="conversation-dropdown">
                 <t-button variant="text" class="conversation-selector">
-                    {{ currentConversationTitle || '选择对话' }}
                     <t-icon name="chevron-down" />
                 </t-button>
             </t-dropdown>
-            <!-- 添加加载更多会话按钮 -->
-            <t-button v-if="hasMoreConversations" size="small" variant="text" 
-                :loading="loadingMoreConversations" @click="loadMoreConversations">
+            <t-button v-if="hasMoreConversations" size="small" variant="text" :loading="loadingMoreConversations"
+                @click="loadMoreConversations">
                 更多会话
             </t-button>
-        </template>
-        <!-- 加载更多指示器 -->
-        <template #header-left v-if="hasMoreMessages && currentConversationId">
+        </div>
+
+    <t-chat class="chat-container" ref="chatRef" layout="both" :clear-history="chatList.length > 0 && !isStreamLoad"
+        @clear="clearConfirm" @scroll="handleScroll">
+        <!-- 对话列表选择器 -->
+
+
+        <template #header v-if="hasMoreMessages && currentConversationId">
+            <!-- 加载更多指示器 -->
             <t-loading v-if="loadingMore" size="small" />
             <t-button v-else variant="text" size="small" @click="loadMoreHistory">加载更多</t-button>
         </template>
+
+
         <template v-for="(item, index) in chatList" :key="index">
-            
+
             <t-chat-item :avatar="item.avatar" :name="item.name" :role="item.role" :datetime="item.datetime"
                 :content="item.content">
                 <template #content>
                     <!-- 只有助手消息且有思考内容才显示思考框 -->
-                    <t-chat-reasoning v-if="item.reasoning && item.reasoning.trim() && item.role === 'assistant'" expand-icon-placement="right"
+                    <t-chat-reasoning v-if="item.reasoning && item.reasoning.trim() && item.role === 'assistant'"
+                        expand-icon-placement="right"
                         @expand-change="(expandValue) => handleChange(expandValue, { index })">
                         <template #header>
                             <t-chat-loading v-if="loading && index === 0" text="思考中..." indicator />
@@ -39,7 +45,6 @@
                     </t-chat-reasoning>
                     <!-- 显示消息内容，如果没有则显示占位 -->
                     <t-chat-content v-if="item.content && item.content.trim().length > 0" :content="item.content" />
-                    <t-chat-content v-else-if="!item.content || item.content.trim().length === 0" content="[无内容]" />
                 </template>
 
                 <!-- 第一条消息且正在加载时显示加载动画 -->
@@ -61,6 +66,7 @@
             <chat-sender :loading="loading" @send="inputEnter" @stop="onStop" />
         </template>
     </t-chat>
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -124,14 +130,14 @@ onMounted(() => {
 const currentConversationTitle = computed(() => {
     const conversation = conversationList.value.find(c => c.id === currentConversationId.value);
     if (!conversation) return '新对话';
-    
+
     // 尝试使用最近的用户消息作为标题
     if (conversation.last_message && conversation.last_message.trim()) {
-        return conversation.last_message.length > 15 
-            ? conversation.last_message.substring(0, 15) + '...' 
+        return conversation.last_message.length > 15
+            ? conversation.last_message.substring(0, 15) + '...'
             : conversation.last_message;
     }
-    
+
     // 如果没有最近消息，使用ID的一部分
     return `对话 ${conversation.id.substring(0, 8)}...`;
 });
@@ -139,12 +145,12 @@ const currentConversationTitle = computed(() => {
 // 构造下拉菜单选项
 const conversationOptions = computed(() => {
     const options = conversationList.value.map(conversation => {
-        const label = conversation.last_message && conversation.last_message.trim() 
-            ? (conversation.last_message.length > 15 
-                ? conversation.last_message.substring(0, 15) + '...' 
+        const label = conversation.last_message && conversation.last_message.trim()
+            ? (conversation.last_message.length > 15
+                ? conversation.last_message.substring(0, 15) + '...'
                 : conversation.last_message)
             : `对话 ${conversation.id.substring(0, 8)}...`;
-            
+
         return {
             content: label,
             value: conversation.id,
@@ -154,13 +160,13 @@ const conversationOptions = computed(() => {
             ]
         };
     });
-    
+
     // 添加"新对话"选项
     options.unshift({
         content: '新对话',
         value: 'new'
     });
-    
+
     return options;
 });
 
@@ -175,7 +181,7 @@ const initChatData = async () => {
     } catch (error) {
         console.error('系统提示词加载失败:', error);
     }
-    
+
     // 获取服务器会话列表
     try {
         // 使用新参数调用
@@ -187,7 +193,7 @@ const initChatData = async () => {
         if (serverConversations && Array.isArray(serverConversations)) {
             conversationList.value = serverConversations;
             console.log('服务器会话列表获取成功:', serverConversations);
-            
+
             // 如果存在会话，加载最近的一个会话
             if (serverConversations.length > 0) {
                 currentConversationId.value = serverConversations[0].id;
@@ -215,32 +221,32 @@ const loadConversationHistory = async (conversationId, resetPage = true) => {
         console.error('会话ID为空，无法加载历史消息');
         return false;
     }
-    
+
     try {
         // 显示加载状态
         loadingMore.value = resetPage ? false : true;
-        
+
         // 重置分页或使用现有分页
         if (resetPage) {
             currentPage.value = 1;
             hasMoreMessages.value = true;
             chatList.value = []; // 清空现有消息
         }
-        
+
         const options = {
             page: currentPage.value,
             pageSize: pageSize.value
         };
-        
+
         console.log('请求服务器历史消息，参数:', options);
         const historyMessages = await getServerConversationHistory(conversationId, options);
         console.log('获取历史消息成功，消息数量:', historyMessages.length);
-        
+
         // 检查每条消息的角色
         historyMessages.forEach((msg, idx) => {
             console.log(`消息 ${idx + 1}: 角色=${msg.role}, 内容=${msg.content && msg.content.substring(0, 30)}...`);
         });
-        
+
         if (historyMessages.length > 0) {
             // 如果是重置，直接设置为新消息
             if (resetPage) {
@@ -251,7 +257,7 @@ const loadConversationHistory = async (conversationId, resetPage = true) => {
                 chatList.value = [...historyMessages, ...chatList.value];
                 console.log('追加历史消息到现有列表前面');
             }
-            
+
             // 判断是否还有更多消息
             hasMoreMessages.value = historyMessages.length >= pageSize.value;
             console.log('是否还有更多消息:', hasMoreMessages.value);
@@ -263,16 +269,16 @@ const loadConversationHistory = async (conversationId, resetPage = true) => {
             hasMoreMessages.value = false;
             console.log('没有更多消息可加载');
         }
-        
+
         // 存储当前会话ID到缓存
         localStorage.setItem('dify_conversation_id', conversationId);
-        
+
         // 保存到本地缓存
         if (chatList.value && Array.isArray(chatList.value) && chatList.value.length > 0) {
             await saveChatHistory(chatList.value);
             console.log('历史消息已保存到本地');
         }
-        
+
         return true;
     } catch (error) {
         console.error('加载对话历史消息失败:', error);
@@ -292,7 +298,7 @@ const loadConversationHistory = async (conversationId, resetPage = true) => {
 const handleConversationSelect = async (option) => {
     console.log('选择对话:', option);
     const value = option.value;
-    
+
     // 处理删除选项
     if (typeof value === 'string' && value.startsWith('delete-')) {
         const conversationId = value.substring(7); // 去掉"delete-"前缀
@@ -300,7 +306,7 @@ const handleConversationSelect = async (option) => {
         // TODO: 调用API删除对话
         // 暂时从列表中移除
         conversationList.value = conversationList.value.filter(c => c.id !== conversationId);
-        
+
         // 如果删除的是当前对话，切换到新对话
         if (currentConversationId.value === conversationId) {
             resetConversation();
@@ -309,7 +315,7 @@ const handleConversationSelect = async (option) => {
         }
         return;
     }
-    
+
     // 处理新对话选项
     if (value === 'new') {
         console.log('创建新对话');
@@ -319,7 +325,7 @@ const handleConversationSelect = async (option) => {
         chatList.value = [];
         return;
     }
-    
+
     // 处理切换对话
     if (value !== currentConversationId.value) {
         currentConversationId.value = value;
@@ -330,7 +336,7 @@ const handleConversationSelect = async (option) => {
 // 滚动加载更多历史消息 - 可在页面滚动到顶部时触发
 const loadMoreHistory = async () => {
     if (!hasMoreMessages.value || !currentConversationId.value || loadingMore.value) return;
-    
+
     try {
         loadingMore.value = true;
         currentPage.value += 1;
@@ -484,9 +490,9 @@ const handleModelRequest = async (inputValue) => {
             signal: signal,
             conversation_id: currentConversationId.value || ''
         };
-        
+
         console.log('使用会话ID:', requestOptions.conversation_id);
-        
+
         await chatWithModel(
             messages,
             {
@@ -503,7 +509,7 @@ const handleModelRequest = async (inputValue) => {
                         console.log('首次收到token');
                         firstTokenReceived.value = true;
                     }
-                    
+
                     // 处理思考内容，不再依赖于特定模型
                     try {
                         // 如果是首次收到思考内容，则替换"思考中..."
@@ -579,14 +585,14 @@ const handleModelRequest = async (inputValue) => {
                     } else {
                         console.error('保存聊天记录失败：chatList.value 无效');
                     }
-                    
+
                     // 如果是新会话，需要更新当前会话ID并刷新会话列表
                     if (!currentConversationId.value && isOk) {
                         // 从存储中获取新生成的会话ID
                         const newConversationId = localStorage.getItem('dify_conversation_id');
                         if (newConversationId) {
                             currentConversationId.value = newConversationId;
-                            
+
                             // 刷新会话列表
                             try {
                                 const serverConversations = await getServerConversations({
@@ -625,31 +631,31 @@ const handleModelRequest = async (inputValue) => {
 // 加载更多会话
 const loadMoreConversations = async () => {
     if (!hasMoreConversations.value || loadingMoreConversations.value) return;
-    
+
     try {
         loadingMoreConversations.value = true;
-        
+
         // 获取最后一个会话的ID作为last_id
-        const lastId = conversationList.value.length > 0 
-            ? conversationList.value[conversationList.value.length - 1].id 
+        const lastId = conversationList.value.length > 0
+            ? conversationList.value[conversationList.value.length - 1].id
             : null;
-        
+
         if (!lastId) {
             hasMoreConversations.value = false;
             return;
         }
-        
+
         // 获取更多会话
         const moreConversations = await getServerConversations({
             last_id: lastId,
             limit: 20,
             sort_by: '-updated_at'
         });
-        
+
         if (moreConversations && Array.isArray(moreConversations) && moreConversations.length > 0) {
             // 合并会话列表
             conversationList.value = [...conversationList.value, ...moreConversations];
-            
+
             // 判断是否还有更多
             hasMoreConversations.value = moreConversations.length >= 20;
         } else {
@@ -665,11 +671,53 @@ const loadMoreConversations = async () => {
 
 <style lang="scss">
 @use '/static/app/styles/index.scss';
+@import '/static/app/styles/variables.scss';
+
+.app-container {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    transition: all 0.3s ease;
+}
+
+.fixed-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: $comp-paddingLR-s $comp-paddingLR-m;
+    background-color: $bg-color-container;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid $component-stroke;
+    box-shadow: $shadow-1;
+    transition: all 0.3s ease;
+    
+    @media (max-width: 768px) {
+        padding: $comp-paddingLR-xs $comp-paddingLR-s;
+    }
+    
+    .t-button {
+        transition: all 0.25s ease;
+        
+        &:hover {
+            transform: translateY(-1px);
+        }
+    }
+}
 
 .chat-container {
     height: 100vh;
     width: 100vw;
-    padding: 0 5px 10px;
+    padding: $comp-size-xl $size-2 $comp-paddingLR-s; /* 增加顶部padding，为固定头部留出空间 */
+    transition: padding 0.3s ease;
+    background-color: $bg-color-page;
+    
+    @media (max-width: 768px) {
+        padding-top: $comp-size-l;
+    }
 
     .t-space {
         display: flex;
@@ -681,30 +729,53 @@ const loadMoreConversations = async () => {
         display: flex;
         align-items: center;
         justify-content: center;
+        color: $text-color-primary;
+        transition: color 0.3s ease;
 
         .t-icon {
-            margin-right: 5px;
+            margin-right: $size-2;
+            transition: all 0.3s ease;
+        }
+    }
+    
+    .t-chat-item {
+        transition: transform 0.2s ease, box-shadow 0.3s ease;
+        border-radius: $radius-medium;
+        
+        &:hover {
+            transform: translateY(-$size-1);
+            box-shadow: $shadow-2;
         }
     }
 }
 
 .loading-space {
-    margin-top: 12px;
-    margin-left: 16px;
+    margin-top: $size-3;
+    margin-left: $size-4;
+    transition: all 0.3s ease;
 }
 
 .conversation-dropdown {
-    margin: 0 10px;
-    
+    margin: 0 $comp-paddingLR-s;
+    transition: all 0.3s ease;
+
     .conversation-selector {
-        max-width: 200px;
+        max-width: $comp-size-xxxxxl;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        font-size: 14px;
-        
+        font-size: $font-size-body-medium;
+        transition: all 0.25s ease;
+        color: $text-color-primary;
+
         &:hover {
-            background-color: rgba(0, 0, 0, 0.05);
+            background-color: $bg-color-container-hover;
+            color: $brand-color;
+        }
+        
+        @media (max-width: 768px) {
+            max-width: $comp-size-xxxl;
+            font-size: $font-size-body-small;
         }
     }
 }

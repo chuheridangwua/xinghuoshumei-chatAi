@@ -32,18 +32,18 @@ const handleStop = () => {
 </script>
 
 <style lang="scss">
-@use '/static/app/styles/variables.scss' as vars;
+@import '/static/app/styles/variables.scss';
 
 .chat-sender {
-  padding: 0 vars.$comp-margin-xs;
+  padding: 0 $comp-margin-xs;
 }
 
 .btn {
-  color: vars.$font-gray-4;
+  color: $font-gray-4;
   border: none;
 
   &:hover {
-    color: vars.$brand-color-6;
+    color: $brand-color-6;
     border: none;
     background: none;
   }
