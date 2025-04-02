@@ -172,4 +172,47 @@ export const handleRequestComplete = (isOk, msg, lastMessage, stateControls, con
     if (fetchCancel && typeof fetchCancel?.value !== 'undefined') {
         fetchCancel.value = null;
     }
+};
+
+/**
+ * 向服务器发送停止流式响应的请求
+ * @param {String} taskId - 任务ID
+ * @param {String} userId - 用户ID
+ * @returns {Promise<boolean>} 是否成功停止
+ */
+export const stopStreamResponse = async (taskId, userId) => {
+    if (!taskId || !userId) {
+        console.error('停止响应失败: taskId或userId不能为空');
+        return false;
+    }
+
+    try {
+        console.log(`发送停止响应请求: taskId=${taskId}, userId=${userId}`);
+        
+        // 使用统一的API配置
+        const baseURL = 'http://192.168.79.122:8083/v1';
+        const apiKey = 'app-JUQYZhaSvAhw9YtuhOCo66A6';
+        
+        const response = await fetch(`${baseURL}/chat-messages/${taskId}/stop`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({ user: userId })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`停止响应请求失败: ${response.status} ${errorText}`);
+            return false;
+        }
+
+        const result = await response.json();
+        console.log('停止响应请求成功:', result);
+        return result && result.result === 'success';
+    } catch (error) {
+        console.error('停止响应请求出错:', error);
+        return false;
+    }
 }; 

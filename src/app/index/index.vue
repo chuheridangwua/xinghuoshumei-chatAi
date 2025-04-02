@@ -68,7 +68,8 @@ import {
     createTimeoutProtection,
     handleRequestAbort,
     handleRequestError,
-    handleRequestComplete
+    handleRequestComplete,
+    stopStreamResponse
 } from '/static/app/api/request.js';
 import { initTheme, setThemeMode, ThemeMode } from '/static/app/api/theme.js';
 
@@ -126,6 +127,9 @@ const currentEditingId = ref('');
 // 删除对话相关状态
 const showDeleteDialog = ref(false);
 const currentDeletingId = ref('');
+
+// 添加变量保存当前任务ID
+const currentTaskId = ref(null);
 
 onMounted(() => {
     // 初始化主题（默认或者根据系统偏好）
@@ -413,7 +417,7 @@ const clearConfirm = async function () {
 };
 
 // 停止请求
-const onStop = function () {
+const onStop = async function () {
     console.log('停止请求');
     try {
         // 立即重置状态 - 先更新UI再中断请求
@@ -427,19 +431,41 @@ const onStop = function () {
         // 处理中断UI更新
         handleRequestAbort(lastItem, { loading, isStreamLoad });
 
-        // 保存聊天记录
-        // saveChatHistory(chatList.value);
-
-        // 尝试取消请求 - 这一步放在状态更新之后
-        if (fetchCancel.value) {
-            try {
-                console.log('执行中断请求');
-                fetchCancel.value();
-            } catch (abortError) {
-                console.error('中断请求时出错:', abortError);
-            } finally {
-                // 不论中断成功与否，都清空中断函数
-                fetchCancel.value = null;
+        // 如果有任务ID，使用新的API停止流式响应
+        if (currentTaskId.value) {
+            console.log('使用任务ID停止响应:', currentTaskId.value);
+            const userId = localStorage.getItem('dify_user_id');
+            
+            // 先发送停止请求
+            const stopResult = await stopStreamResponse(currentTaskId.value, userId);
+            console.log('停止响应结果:', stopResult);
+            
+            // 无论成功失败，都尝试使用AbortController中断
+            if (fetchCancel.value) {
+                try {
+                    console.log('执行中断请求');
+                    fetchCancel.value();
+                } catch (abortError) {
+                    console.error('中断请求时出错:', abortError);
+                } finally {
+                    // 不论中断成功与否，都清空中断函数
+                    fetchCancel.value = null;
+                    // 清空任务ID
+                    currentTaskId.value = null;
+                }
+            }
+        } else {
+            // 没有任务ID时，使用原来的方式中断
+            if (fetchCancel.value) {
+                try {
+                    console.log('执行中断请求');
+                    fetchCancel.value();
+                } catch (abortError) {
+                    console.error('中断请求时出错:', abortError);
+                } finally {
+                    // 不论中断成功与否，都清空中断函数
+                    fetchCancel.value = null;
+                }
             }
         }
     } catch (error) {
@@ -448,6 +474,7 @@ const onStop = function () {
         loading.value = false;
         isStreamLoad.value = false;
         fetchCancel.value = null;
+        currentTaskId.value = null;
     }
 };
 
@@ -503,6 +530,7 @@ const handleModelRequest = async (inputValue) => {
     loading.value = true;
     isStreamLoad.value = true;
     firstTokenReceived.value = false;
+    currentTaskId.value = null; // 重置任务ID
     const lastItem = chatList.value[0];
     console.log('最后一条消息:', lastItem);
 
@@ -597,9 +625,9 @@ const handleModelRequest = async (inputValue) => {
                     // 处理请求错误
                     const isAborted = handleRequestError(error, lastItem, { loading, isStreamLoad });
 
-                    // 保存聊天记录
-                    // saveChatHistory(chatList.value);
-
+                    // 清除任务ID
+                    currentTaskId.value = null;
+                    
                     // 清除中断函数
                     fetchCancel.value = null;
                 },
@@ -608,6 +636,13 @@ const handleModelRequest = async (inputValue) => {
                     console.log('接收到新会话ID:', newId);
                     if (newId && !currentConversationId.value) {
                         currentConversationId.value = newId;
+                    }
+                },
+                // 任务ID变更处理
+                onTaskIdChange: (newTaskId) => {
+                    console.log('接收到任务ID:', newTaskId);
+                    if (newTaskId) {
+                        currentTaskId.value = newTaskId;
                     }
                 },
                 // 请求完成
@@ -619,6 +654,9 @@ const handleModelRequest = async (inputValue) => {
                         { loading, isStreamLoad },
                         { timeoutId, fetchCancel }
                     );
+
+                    // 清除任务ID
+                    currentTaskId.value = null;
 
                     // 保存聊天记录（添加防护措施）
                     if (chatList.value && Array.isArray(chatList.value)) {
@@ -666,8 +704,8 @@ const handleModelRequest = async (inputValue) => {
         // 处理请求错误
         handleRequestError(error, lastItem, { loading, isStreamLoad });
 
-        // 保存聊天记录
-        // saveChatHistory(chatList.value);
+        // 清除任务ID
+        currentTaskId.value = null;
 
         // 清空中断函数，防止内存泄漏
         fetchCancel.value = null;
@@ -747,8 +785,6 @@ const handleRenameConversation = async ({ conversationId, name }) => {
             return conversation;
         });
 
-        // 显示成功消息
-        // 如果有消息提示组件可以在这里使用
     } catch (error) {
         console.error('重命名对话失败:', error);
         // 显示错误消息
@@ -772,7 +808,6 @@ const handlePinConversation = ({ conversationId }) => {
     // 关闭抽屉
     showConversationDrawer.value = false;
 
-    // TODO: 如果后端支持会话置顶，可以在这里调用API
 };
 
 // 显示重命名对话框
@@ -862,7 +897,6 @@ const cancelDelete = () => {
     width: 100vw;
     padding: $comp-size-xxl $size-2 $comp-margin-l;
     transition: padding 0.3s ease;
-    // background-color: $bg-color-page;
 
     .t-space {
         display: flex;

@@ -35,28 +35,28 @@ export const getServerConversations = async (options = {}) => {
     try {
         const userId = ensureUserId();
         console.log('获取会话列表，用户ID:', userId);
-        
+
         // 构建URL参数
         const url = new URL(`${MODEL_CONFIG.baseURL}/conversations`);
-        
+
         // 添加用户ID，必选参数
         url.searchParams.append('user', userId);
-        
+
         // 添加可选参数
         if (options.last_id) {
             url.searchParams.append('last_id', options.last_id);
         }
-        
+
         if (options.limit) {
             url.searchParams.append('limit', options.limit);
         }
-        
+
         if (options.sort_by) {
             url.searchParams.append('sort_by', options.sort_by);
         }
-        
+
         console.log('请求URL:', url.toString());
-        
+
         const response = await fetch(url, {
             method: 'GET',
             headers: {
@@ -72,7 +72,7 @@ export const getServerConversations = async (options = {}) => {
 
         const data = await response.json();
         console.log('会话列表数据:', data);
-        
+
         // 按时间顺序排序会话，最新的在前面
         if (data && Array.isArray(data.data)) {
             data.data.sort((a, b) => {
@@ -81,7 +81,7 @@ export const getServerConversations = async (options = {}) => {
                 return dateB - dateA;
             });
         }
-        
+
         return data.data || [];
     } catch (error) {
         console.error('获取会话列表失败:', error);
@@ -96,13 +96,13 @@ export const getServerConversations = async (options = {}) => {
  */
 const extractThinkingContent = (content) => {
     if (!content) return { content: '', reasoning: '' };
-    
+
     // 思考内容标签
     const THINK_START_TAG = '<think>';
     const THINK_END_TAG = '</think>';
     let reasoning = '';
     let processedContent = content;
-    
+
     if (content.includes(THINK_START_TAG) && content.includes(THINK_END_TAG)) {
         try {
             // 尝试提取<think>标签中的内容
@@ -110,7 +110,7 @@ const extractThinkingContent = (content) => {
             if (thinkMatch && thinkMatch[1]) {
                 reasoning = thinkMatch[1].trim();
             }
-            
+
             // 移除<think>标签及其内容
             processedContent = content.replace(/<think>[\s\S]*?<\/think>/, '').trim();
         } catch (error) {
@@ -119,7 +119,7 @@ const extractThinkingContent = (content) => {
             processedContent = content;
         }
     }
-    
+
     return {
         content: processedContent,
         reasoning: reasoning
@@ -137,15 +137,15 @@ export const getServerConversationHistory = async (conversationId, options = {})
     try {
         const userId = ensureUserId();
         console.log('获取会话历史, 会话ID:', conversationId, '用户ID:', userId);
-        
+
         const { page = 1, pageSize = 20 } = options;
-        
+
         const url = new URL(`${MODEL_CONFIG.baseURL}/messages`);
         url.searchParams.append('conversation_id', conversationId);
         url.searchParams.append('user', userId);
         url.searchParams.append('page', page);
         url.searchParams.append('page_size', pageSize);
-        
+
         const response = await fetch(url, {
             method: 'GET',
             headers: {
@@ -161,13 +161,13 @@ export const getServerConversationHistory = async (conversationId, options = {})
 
         const data = await response.json();
         console.log('会话历史数据:', data);
-        
+
         if (data && data.data && Array.isArray(data.data)) {
             console.log('获取会话历史成功，消息数量:', data.data.length);
-            
+
             // 结果数组，将包含格式化后的消息
             const formattedMessages = [];
-            
+
             // 分析服务器返回的每条消息
             for (const msg of data.data) {
                 // 如果有query字段，创建用户消息
@@ -181,12 +181,12 @@ export const getServerConversationHistory = async (conversationId, options = {})
                         id: msg.id + '_user'
                     });
                 }
-                
+
                 // 如果有answer字段，创建助手消息
                 if (msg.answer) {
                     // 提取思考内容
                     const { content, reasoning } = extractThinkingContent(msg.answer);
-                    
+
                     formattedMessages.push({
                         avatar: 'https://tdesign.gtimg.com/site/chat-avatar.png', // 助手头像
                         name: 'TDesignAI',
@@ -198,17 +198,17 @@ export const getServerConversationHistory = async (conversationId, options = {})
                     });
                 }
             }
-            
+
             // 日志输出消息统计信息
             const userCount = formattedMessages.filter(msg => msg.role === 'user').length;
             const assistantCount = formattedMessages.filter(msg => msg.role === 'assistant').length;
             console.log(`消息统计: 用户消息=${userCount}, 助手消息=${assistantCount}, 总计=${formattedMessages.length}`);
-            
+
             // 后端API是倒序返回的(最新的在前面)，但前端显示需要正序，所以需要反转
             formattedMessages.reverse();
-            
+
             console.log('格式化后的消息:', formattedMessages);
-            
+
             return formattedMessages;
         } else {
             console.log('会话历史为空或格式不正确');
@@ -228,12 +228,12 @@ export const getServerConversationHistory = async (conversationId, options = {})
  */
 export const getChatHistory = async (conversationId, options = {}) => {
     console.log('获取聊天记录');
-    
+
     if (!conversationId) {
         console.log('没有有效的会话ID，无法获取聊天记录');
         return [];
     }
-    
+
     try {
         // 从服务器获取会话历史
         const messages = await getServerConversationHistory(conversationId, options);
@@ -272,7 +272,7 @@ export const buildMessageHistory = (chatList, currentMessage, systemPrompt, mess
             if (item.role === 'system') {
                 hasSystemPrompt = true;
             }
-            
+
             messagesToSend.push({
                 role: item.role,
                 content: item.content
@@ -283,9 +283,9 @@ export const buildMessageHistory = (chatList, currentMessage, systemPrompt, mess
     // 添加当前的用户消息（只添加一次，避免重复）
     if (currentMessage && currentMessage.trim() !== '') {
         // 先检查是否已经添加过当前用户消息
-        const lastUserMessageIndex = messagesToSend.findIndex(msg => 
+        const lastUserMessageIndex = messagesToSend.findIndex(msg =>
             msg.role === 'user' && msg.content === currentMessage);
-        
+
         if (lastUserMessageIndex === -1) { // 如果没有添加过，才添加
             messagesToSend.push({
                 role: 'user',
@@ -372,10 +372,10 @@ export const sendChatRequest = async (messages, options = {}) => {
     // 从messages中提取最后一条用户消息作为query
     const lastUserMessage = messages.filter(msg => msg.role === 'user').pop();
     const query = lastUserMessage ? lastUserMessage.content : '';
-    
+
     // 获取conversation_id（如果存在）
     const conversation_id = options.conversation_id || '';
-    
+
     console.log('发送到Dify API的请求:', {
         query,
         conversation_id,
@@ -391,7 +391,7 @@ export const sendChatRequest = async (messages, options = {}) => {
         user: userId,
         auto_generate_name: false
     };
-    
+
     // 只有当conversation_id存在时才添加到请求中
     if (conversation_id) {
         requestBody.conversation_id = conversation_id;
@@ -437,6 +437,7 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
         let buffer = '';
         let isInThinkingMode = false; // 追踪是否在思考模式中
         let conversation_id = null; // 存储会话ID
+        let task_id = null; // 存储任务ID
 
         while (true) {
             // 检查是否请求已被中断（AbortController信号）
@@ -447,39 +448,49 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
             }
 
             const { done, value } = await reader.read();
-            
+
             if (done) {
                 break;
             }
 
             // 解码接收到的数据
             buffer += decoder.decode(value, { stream: true });
-            
+
             // 处理缓冲区中的数据行
             const lines = buffer.split('\n');
             buffer = lines.pop() || ''; // 最后一行可能不完整，保留到下一次
 
             for (const line of lines) {
                 if (!line.trim() || !line.startsWith('data: ')) continue;
-                
+
                 try {
                     const data = JSON.parse(line.substring(6));
                     console.log('收到数据:', data);
-                    
-                    // 保存会话ID，不使用localStorage缓存
+
+                    // 保存会话ID
                     if (data.conversation_id && !conversation_id) {
                         conversation_id = data.conversation_id;
                         console.log('捕获到对话ID:', conversation_id);
-                        // 触发回调通知上层组件（如果存在）
+                        // 使用回调通知上层组件
                         if (callbacks.onConversationIdChange) {
                             callbacks.onConversationIdChange(conversation_id);
                         }
                     }
-                    
+
+                    // 保存任务ID
+                    if (data.task_id && !task_id) {
+                        task_id = data.task_id;
+                        console.log('捕获到任务ID:', task_id);
+                        // 使用回调通知上层组件
+                        if (callbacks.onTaskIdChange) {
+                            callbacks.onTaskIdChange(task_id);
+                        }
+                    }
+
                     // 处理Dify API返回格式
                     if (data.event === 'message') {
                         const answer = data.answer || '';
-                        
+
                         // 检查是否包含思考过程
                         if (answer.includes('<think>')) {
                             isInThinkingMode = true;
@@ -492,9 +503,9 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
                             if (parts[0].trim()) {
                                 onReasoning?.(parts[0]);
                             }
-                            
+
                             isInThinkingMode = false;
-                            
+
                             if (parts.length > 1 && parts[1].trim()) {
                                 onMessage?.(parts[1]);
                             }
@@ -507,7 +518,7 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
                         }
                     } else if (data.event === 'message_end') {
                         console.log('消息完成:', data);
-                        
+
                         // 如果有会话ID，在消息结束时执行自动重命名的检查
                         if (conversation_id) {
                             autoRenameConversationIfNeeded(conversation_id);
@@ -546,17 +557,17 @@ export const autoRenameConversationIfNeeded = async (conversationId) => {
         // 获取当前会话的消息数量
         const messages = await getServerConversationHistory(conversationId);
         const messageCount = messages.length;
-        
+
         // 计算用户和助手消息对的数量（一问一答算一轮对话）
         // 由于每个消息都会创建用户和助手两条记录，所以总消息数除以2就是对话轮数
         const conversationTurns = Math.floor(messageCount / 2);
-        
+
         console.log(`当前会话消息数: ${messageCount}, 对话轮数: ${conversationTurns}`);
-        
+
         // 获取当前会话信息，以检查是否已经有自定义名称
         const conversations = await getServerConversations();
         const currentConversation = conversations.find(conv => conv.id === conversationId);
-        
+
         // 判断是否需要执行自动重命名
         // 条件：
         // 1. 会话在前三轮对话后
@@ -568,13 +579,13 @@ export const autoRenameConversationIfNeeded = async (conversationId) => {
             // 会话没有名称或有默认名称
             (!currentConversation || !currentConversation.name || currentConversation.name.startsWith('新对话') || currentConversation.name === 'New conversation')
         );
-        
+
         if (needRename) {
             console.log(`执行自动重命名，当前对话轮数: ${conversationTurns}`);
-            
+
             // 调用重命名API
             await renameConversation(conversationId, { auto_generate: true });
-            
+
             console.log(`自动重命名成功，对话轮数: ${conversationTurns}`);
         } else {
             console.log(`不需要执行自动重命名，当前轮数: ${conversationTurns}`);
@@ -602,13 +613,13 @@ export const chatWithModel = async (messages, callbacks = {}, options = {}) => {
             ...options,
             conversation_id: conversationId
         };
-        
+
         console.log('使用会话ID:', conversationId);
-        
+
         // 发送请求
         const responsePromise = sendChatRequest(messages, requestOptions);
         await handleStreamResponse(responsePromise, callbacks);
-        
+
         return { success: true };
     } catch (error) {
         console.error('聊天请求错误:', error);
@@ -683,22 +694,22 @@ export const resetConversation = () => {
 export const renameConversation = async (conversationId, options = {}) => {
     const model = MODEL_CONFIG;
     const userId = ensureUserId();
-    
+
     try {
         // 创建请求体
         const requestBody = {
             user: userId
         };
-        
+
         // 添加name或auto_generate
         if (options.auto_generate) {
             requestBody.auto_generate = true;
         } else if (options.name) {
             requestBody.name = options.name;
         }
-        
+
         console.log('重命名会话，请求体:', requestBody);
-        
+
         const response = await fetch(`${model.baseURL}/conversations/${conversationId}/name`, {
             method: 'POST',
             headers: {
@@ -707,12 +718,12 @@ export const renameConversation = async (conversationId, options = {}) => {
             },
             body: JSON.stringify(requestBody)
         });
-        
+
         if (!response.ok) {
             const errorText = await response.text();
             throw new Error(`重命名会话失败: ${response.status} ${errorText}`);
         }
-        
+
         const data = await response.json();
         console.log('重命名会话成功:', data);
         return data;
@@ -730,15 +741,15 @@ export const renameConversation = async (conversationId, options = {}) => {
 export const deleteConversation = async (conversationId) => {
     const model = MODEL_CONFIG;
     const userId = ensureUserId();
-    
+
     try {
         // 创建请求体
         const requestBody = {
             user: userId
         };
-        
+
         console.log('删除会话，请求体:', requestBody);
-        
+
         const response = await fetch(`${model.baseURL}/conversations/${conversationId}`, {
             method: 'DELETE',
             headers: {
@@ -747,12 +758,12 @@ export const deleteConversation = async (conversationId) => {
             },
             body: JSON.stringify(requestBody)
         });
-        
+
         if (!response.ok) {
             const errorText = await response.text();
             throw new Error(`删除会话失败: ${response.status} ${errorText}`);
         }
-        
+
         const data = await response.json();
         console.log('删除会话成功:', data);
         return data;
@@ -771,13 +782,13 @@ export const getCurrentConversation = async () => {
     try {
         // 获取会话列表
         const conversations = await getServerConversations({ limit: 1 });
-        
+
         // 如果有会话，返回第一个会话的ID
         if (conversations && conversations.length > 0) {
             console.log('使用会话列表中的第一个会话:', conversations[0].id);
             return conversations[0].id;
         }
-        
+
         // 如果没有会话，返回空字符串，表示创建新会话
         console.log('没有现有会话，将创建新会话');
         return '';
