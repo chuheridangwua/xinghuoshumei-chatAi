@@ -2,7 +2,8 @@
     <t-chat-item :avatar="avatar" :name="name" :role="role" :datetime="datetime" :content="content">
         <template #content>
             <!-- 只有助手消息且有思考内容才显示思考框 -->
-            <t-chat-reasoning v-if="reasoning && reasoning.trim() && role === 'assistant'" expand-icon-placement="right"
+            <t-chat-reasoning v-if="reasoning && reasoning.trim() && role === 'assistant' && reasoning !== '思考中...'"
+                expand-icon-placement="right"
                 @expand-change="(expandValue) => $emit('reasoning-expand-change', expandValue)">
                 <template #header>
                     <t-chat-loading v-if="isFirstMessage && loading" text="思考中..." indicator />
@@ -122,7 +123,13 @@ const handleOperation = (type, options) => {
 
 /* 确保Markdown内容中的元素没有边距 */
 :deep(.zero-margins) {
-    h1, h2, h3, h4, h5, h6 {
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
         margin-top: 0 !important;
         margin-bottom: 8px !important;
         padding: 0 !important;

@@ -463,7 +463,7 @@ export const deleteConversation = async (conversationId) => {
     try {
         // 创建请求体
         const requestBody = {
-            user: userId
+            user: userId,
         };
 
         const response = await fetch(`${MODEL_CONFIG.baseURL}/conversations/${conversationId}`, {

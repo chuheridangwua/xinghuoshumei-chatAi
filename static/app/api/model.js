@@ -56,7 +56,9 @@ export const sendChatRequest = async (messages, options = {}) => {
 
     // 创建请求对象
     const requestBody = {
-        inputs: {},
+        inputs: {
+            username: userId // 使用用户ID作为自定义变量username的值
+        },
         query: query,
         response_mode: "streaming",
         user: userId
