@@ -29,7 +29,7 @@ defineProps({
 defineEmits(['open-drawer', 'new-conversation']);
 </script>
 
-<style lang="scss" >
+<style lang="scss">
 @import '/static/app/styles/variables.scss';
 
 .fixed-header {
@@ -39,13 +39,11 @@ defineEmits(['open-drawer', 'new-conversation']);
     left: 0;
     width: 100%;
     padding: $comp-paddingLR-s $comp-paddingLR-m;
-    background-color: $bg-color-container;
     z-index: 100;
     display: flex;
     align-items: center;
     justify-content: space-between;
     border-bottom: 1px solid $component-stroke;
-    box-shadow: $shadow-1;
     transition: all 0.3s ease;
 
     .t-button {
@@ -78,6 +76,18 @@ defineEmits(['open-drawer', 'new-conversation']);
             font-size: $font-size-body-small;
             max-width: 50%;
         }
+    }
+}
+
+:root[theme-mode="light"] {
+    .fixed-header {
+        background-color: $gray-color-1 !important;
+    }
+}
+
+:root[theme-mode="dark"] {
+    .fixed-header {
+        background-color: $bg-color-container !important;
     }
 }
 </style>

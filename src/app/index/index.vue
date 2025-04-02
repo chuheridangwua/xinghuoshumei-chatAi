@@ -1,10 +1,8 @@
 <template>
     <div class="app-container">
-        <!-- 使用抽取出的头部导航栏组件 -->
         <HeaderNav :title="currentConversationTitle" @open-drawer="showConversationDrawer = true"
             @new-conversation="handleNewConversation" />
 
-        <!-- 使用抽取出的对话列表抽屉组件 -->
         <ConversationDrawer v-model:visible="showConversationDrawer" :current-conversation-id="currentConversationId"
             :grouped-conversations="groupedConversations" :has-more-conversations="hasMoreConversations"
             :loading-more-conversations="loadingMoreConversations" @select="handleConversationSelect"
@@ -104,7 +102,7 @@ const showConversationDrawer = ref(false); // 是否显示对话列表抽屉
 onMounted(() => {
     // 初始化主题（默认或者根据系统偏好）
     initTheme();
-    // document.documentElement.removeAttribute('theme-mode');
+    // document.documentElement.setAttribute('theme-mode', 'light');
     console.log('页面加载');
     initChatData();
 });
@@ -713,7 +711,7 @@ const handleNewConversation = () => {
     width: 100vw;
     padding: $comp-size-xxl $size-2 $comp-margin-l;
     transition: padding 0.3s ease;
-    background-color: $bg-color-page;
+    // background-color: $bg-color-page;
 
     .t-space {
         display: flex;

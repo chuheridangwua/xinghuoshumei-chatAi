@@ -49,8 +49,7 @@ const handleStop = () => {
   }
 }
 
-.btn.t-button {
-  height: 32px;
-  padding: 0;
+.t-chat__footer .t-chat__footer__content {
+    margin-top: 0 !important;
 }
 </style>
