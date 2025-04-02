@@ -564,8 +564,6 @@ export const getSuggestedQuestions = async (messageId) => {
             }
         });
 
-        console.log(response);
-
         if (!response.ok) {
             const errorText = await response.text();
             console.error(`获取建议问题失败: ${response.status} ${errorText}`);
@@ -573,6 +571,8 @@ export const getSuggestedQuestions = async (messageId) => {
         }
 
         const result = await response.json();
+
+        console.log("[Chat] 获取建议问题", result.data);
         
         if (result && result.result === 'success' && Array.isArray(result.data)) {
             return result.data;

@@ -208,14 +208,18 @@ export const handleRequestComplete = (isOk, msg, lastMessage, stateControls, con
  */
 export const stopStreamResponse = async (taskId, userId) => {
     if (!taskId || !userId) {
-        console.error('停止响应失败: taskId或userId不能为空');
+        console.error('[Stream Stop] 停止响应失败: taskId或userId不能为空', { taskId, userId });
         return false;
     }
+
+    console.log('[Stream Stop] 尝试停止流式响应', { taskId, userId });
 
     try {
         // 使用统一的API配置
         const baseURL = 'http://192.168.79.122:8083/v1';
         const apiKey = 'app-JUQYZhaSvAhw9YtuhOCo66A6';
+        
+        console.log('[Stream Stop] 发送停止请求到:', `${baseURL}/chat-messages/${taskId}/stop`);
         
         const response = await fetch(`${baseURL}/chat-messages/${taskId}/stop`, {
             method: 'POST',
@@ -231,13 +235,20 @@ export const stopStreamResponse = async (taskId, userId) => {
         const result = await response.json();
         
         if (response.ok) {
+            console.log('[Stream Stop] 流式响应已成功停止', { 
+                status: response.status,
+                result: result 
+            });
             return true;
         } else {
-            console.error('停止响应请求失败:', result);
+            console.error('[Stream Stop] 停止响应请求失败:', { 
+                status: response.status, 
+                result: result 
+            });
             return false;
         }
     } catch (error) {
-        console.error('停止响应请求错误:', error);
+        console.error('[Stream Stop] 停止响应请求错误:', error);
         return false;
     }
 }; 
