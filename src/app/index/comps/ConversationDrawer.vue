@@ -1,12 +1,12 @@
 <template>
     <!-- 侧边抽屉 - 对话列表 -->
     <t-drawer
-        v-model:visible="visible"
+        :visible="visible"
+        @update:visible="$emit('update:visible', $event)"
         placement="left"
         :close-on-overlay-click="true"
         :footer="false"
         title="对话列表"
-        @update:visible="$emit('update:visible', $event)"
     >
         <t-list>
             <!-- 新对话选项 -->
