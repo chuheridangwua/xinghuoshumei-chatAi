@@ -19,25 +19,25 @@ body, html {
 }
 
 // 自定义滚动条
-.custom-scrollbar {
-  &::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
+// .custom-scrollbar {
+//   &::-webkit-scrollbar {
+//     width: 6px;
+//     height: 6px;
+//   }
 
-  &::-webkit-scrollbar-track {
-    background: variables.$scroll-track-color;
-  }
+//   &::-webkit-scrollbar-track {
+//     background: variables.$scroll-track-color;
+//   }
 
-  &::-webkit-scrollbar-thumb {
-    background: variables.$scrollbar-color;
-    border-radius: variables.$radius-small;
-  }
+//   &::-webkit-scrollbar-thumb {
+//     background: variables.$scrollbar-color;
+//     border-radius: variables.$radius-small;
+//   }
 
-  &::-webkit-scrollbar-thumb:hover {
-    background: variables.$scrollbar-hover-color;
-  }
-}
+//   &::-webkit-scrollbar-thumb:hover {
+//     background: variables.$scrollbar-hover-color;
+//   }
+// }
 
 // 自定义卡片
 .app-card {
