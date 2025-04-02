@@ -169,14 +169,6 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
 
                         // 处理Dify API返回格式
                         if (data.event === 'message') {
-                            // console.log('%c[Stream] 收到消息事件: message', 'color: #4CAF50; font-weight: bold;');
-                            // console.log('%c[Stream Message]', 'color: #2196F3; font-weight: bold;', {
-                            //     task_id: data.task_id,
-                            //     message_id: data.message_id,
-                            //     conversation_id: data.conversation_id,
-                            //     answer_length: (data.answer || '').length
-                            // });
-
                             const answer = data.answer || '';
 
                             // 检查是否包含思考过程
@@ -184,12 +176,10 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
                                 isInThinkingMode = true;
                                 const thinkContent = answer.replace('<think>', '');
                                 console.log('%c[Stream] 进入思考模式', 'color: #FF9800; font-weight: bold;');
-                                // 不需要检查trim后内容是否为空，直接传递原始内容
                                 onReasoning?.(thinkContent);
                             } else if (answer.includes('</think>')) {
                                 const parts = answer.split('</think>');
                                 console.log('%c[Stream] 结束思考模式', 'color: #FF9800; font-weight: bold;');
-                                // 不需要检查trim后内容是否为空，直接传递原始内容
                                 onReasoning?.(parts[0]);
 
                                 isInThinkingMode = false;
@@ -206,14 +196,6 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
                             }
                         } else if (data.event === 'message_end') {
                             console.log('%c[Stream] 收到消息结束事件: message_end', 'color: #4CAF50; font-weight: bold;');
-                            console.log('%c[Stream Message End]', 'color: #2196F3; font-weight: bold;', {
-                                task_id: data.task_id,
-                                message_id: data.message_id,
-                                conversation_id: data.conversation_id,
-                                metadata: data.metadata,
-                                usage: data.usage,
-                                retriever_resources: data.retriever_resources?.length || 0
-                            });
 
                             // 消息结束时，只保存消息ID，不直接获取建议问题
                             if (data.message_id && callbacks.onMessageIdChange) {
@@ -227,93 +209,27 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
                             }
                         } else if (data.event === 'message_file') {
                             console.log('%c[Stream] 收到文件事件: message_file', 'color: #4CAF50; font-weight: bold;');
-                            console.log('%c[Stream File]', 'color: #2196F3; font-weight: bold;', {
-                                id: data.id,
-                                type: data.type,
-                                belongs_to: data.belongs_to,
-                                url: data.url,
-                                conversation_id: data.conversation_id
-                            });
                         } else if (data.event === 'message_replace') {
                             console.log('%c[Stream] 收到消息替换事件: message_replace', 'color: #4CAF50; font-weight: bold;');
-                            console.log('%c[Stream Replace]', 'color: #2196F3; font-weight: bold;', {
-                                task_id: data.task_id,
-                                message_id: data.message_id,
-                                conversation_id: data.conversation_id,
-                                answer_length: (data.answer || '').length,
-                                created_at: data.created_at
-                            });
-
                             // 替换消息内容为审查后的内容
                             onMessage?.(data.answer || '');
                         } else if (data.event === 'tts_message') {
                             console.log('%c[Stream] 收到TTS事件: tts_message', 'color: #4CAF50; font-weight: bold;');
-                            console.log('%c[Stream TTS]', 'color: #2196F3; font-weight: bold;', {
-                                task_id: data.task_id,
-                                message_id: data.message_id,
-                                audio_length: (data.audio || '').length,
-                                created_at: data.created_at
-                            });
                         } else if (data.event === 'tts_message_end') {
                             console.log('%c[Stream] 收到TTS结束事件: tts_message_end', 'color: #4CAF50; font-weight: bold;');
-                            console.log('%c[Stream TTS End]', 'color: #2196F3; font-weight: bold;', {
-                                task_id: data.task_id,
-                                message_id: data.message_id,
-                                created_at: data.created_at
-                            });
                         } else if (data.event === 'workflow_started') {
                             console.log('%c[Stream] 收到工作流开始事件: workflow_started', 'color: #4CAF50; font-weight: bold;');
-                            console.log('%c[Stream Workflow Started]', 'color: #2196F3; font-weight: bold;', {
-                                task_id: data.task_id,
-                                workflow_run_id: data.workflow_run_id,
-                                data: data.data
-                            });
                         } else if (data.event === 'node_started') {
                             console.log('%c[Stream] 收到节点开始事件: node_started', 'color: #4CAF50; font-weight: bold;');
                             console.log('%c[Stream Node Started]', 'color: #2196F3; font-weight: bold;', {
-                                task_id: data.task_id,
-                                workflow_run_id: data.workflow_run_id,
-                                data: {
-                                    id: data.data?.id,
-                                    node_id: data.data?.node_id,
-                                    node_type: data.data?.node_type,
-                                    title: data.data?.title
-                                }
+                                title: data.data?.title
                             });
                         } else if (data.event === 'node_finished') {
                             console.log('%c[Stream] 收到节点完成事件: node_finished', 'color: #4CAF50; font-weight: bold;');
-                            console.log('%c[Stream Node Finished]', 'color: #2196F3; font-weight: bold;', {
-                                task_id: data.task_id,
-                                workflow_run_id: data.workflow_run_id,
-                                data: {
-                                    id: data.data?.id,
-                                    node_id: data.data?.node_id,
-                                    status: data.data?.status,
-                                    error: data.data?.error
-                                }
-                            });
                         } else if (data.event === 'workflow_finished') {
                             console.log('%c[Stream] 收到工作流完成事件: workflow_finished', 'color: #4CAF50; font-weight: bold;');
-                            console.log('%c[Stream Workflow Finished]', 'color: #2196F3; font-weight: bold;', {
-                                task_id: data.task_id,
-                                workflow_run_id: data.workflow_run_id,
-                                data: {
-                                    id: data.data?.id,
-                                    workflow_id: data.data?.workflow_id,
-                                    status: data.data?.status,
-                                    error: data.data?.error
-                                }
-                            });
                         } else if (data.event === 'error') {
                             console.error('%c[Stream] 收到错误事件: error', 'color: #F44336; font-weight: bold;');
-                            console.error('%c[Stream Error]', 'color: #F44336; font-weight: bold;', {
-                                task_id: data.task_id,
-                                message_id: data.message_id,
-                                status: data.status,
-                                code: data.code,
-                                message: data.message
-                            });
-
                             onError?.(data.message || '流处理错误');
                         } else if (data.event === 'ping') {
                             console.log('%c[Stream] 收到ping事件', 'color: #607D8B; font-style: italic;');
