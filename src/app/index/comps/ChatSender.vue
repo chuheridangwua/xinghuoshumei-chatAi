@@ -1,9 +1,9 @@
 <template>
   <div class="chat-sender">
-    <t-chat-sender v-model="query" :stop-disabled="loading" :textarea-props="{
+    <t-chat-input v-model="query" :stop-disabled="loading" :textarea-props="{
       placeholder: '请输入消息...',
     }" @send="handleSend" @stop="handleStop">
-    </t-chat-sender>
+    </t-chat-input>
   </div>
 </template>
 

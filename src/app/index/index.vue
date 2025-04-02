@@ -2,16 +2,80 @@
     <div class="app-container">
         <!-- 添加固定的头部导航栏 -->
         <div class="fixed-header">
-            <t-dropdown :options="conversationOptions" @click="handleConversationSelect" class="conversation-dropdown">
-                <t-button variant="text" class="conversation-selector">
-                    <t-icon name="chevron-down" />
-                </t-button>
-            </t-dropdown>
-            <t-button v-if="hasMoreConversations" size="small" variant="text" :loading="loadingMoreConversations"
-                @click="loadMoreConversations">
-                更多会话
+            <!-- 左侧菜单图标，点击打开抽屉 -->
+            <t-button variant="text" class="header-icon" @click="showConversationDrawer = true">
+                <t-icon name="menu" />
+            </t-button>
+            
+            <!-- 中间标题 -->
+            <div class="header-title">
+                {{ currentConversationTitle }}
+            </div>
+            
+            <!-- 右侧新建对话按钮 -->
+            <t-button variant="text" class="header-icon" @click="handleNewConversation">
+                <t-icon name="add" />
             </t-button>
         </div>
+
+        <!-- 侧边抽屉 - 对话列表 -->
+        <t-drawer
+            v-model:visible="showConversationDrawer"
+            placement="left"
+            :close-on-overlay-click="true"
+            :footer="false"
+            title="对话列表"
+        >
+            <t-list>
+                <!-- 新对话选项 -->
+                <t-list-item 
+                    @click="handleNewConversation"
+                    class="conversation-item"
+                    :class="{ 'active': currentConversationId === '' }"
+                >
+                    <t-icon name="add" class="conversation-icon" />
+                    <span class="conversation-text">新对话</span>
+                </t-list-item>
+                
+                <!-- 对话列表 -->
+                <t-list-item 
+                    v-for="conversation in conversationList" 
+                    :key="conversation.id"
+                    @click="handleConversationSelect({ value: conversation.id })"
+                    class="conversation-item"
+                    :class="{ 'active': conversation.id === currentConversationId }"
+                >
+                    <t-icon name="chat" class="conversation-icon" />
+                    <span class="conversation-text">{{ conversation.last_message && conversation.last_message.trim()
+                        ? (conversation.last_message.length > 20
+                            ? conversation.last_message.substring(0, 20) + '...'
+                            : conversation.last_message)
+                        : `对话 ${conversation.id.substring(0, 8)}...` }}</span>
+                    
+                    <!-- 删除按钮 -->
+                    <t-button 
+                        variant="text" 
+                        shape="circle" 
+                        size="small" 
+                        class="delete-btn"
+                        @click.stop="handleConversationSelect({ value: `delete-${conversation.id}` })"
+                    >
+                        <t-icon name="delete" />
+                    </t-button>
+                </t-list-item>
+                
+                <!-- 加载更多选项 -->
+                <t-list-item 
+                    v-if="hasMoreConversations" 
+                    @click="loadMoreConversations"
+                    class="load-more-item"
+                >
+                    <t-button size="small" variant="text" :loading="loadingMoreConversations">
+                        加载更多会话
+                    </t-button>
+                </t-list-item>
+            </t-list>
+        </t-drawer>
 
     <t-chat class="chat-container" ref="chatRef" layout="both" :clear-history="chatList.length > 0 && !isStreamLoad"
         @clear="clearConfirm" @scroll="handleScroll">
@@ -116,6 +180,7 @@ const scrollTopThreshold = 50; // 滚动到顶部触发阈值
 // 添加新的状态变量
 const hasMoreConversations = ref(true); // 是否有更多会话可加载
 const loadingMoreConversations = ref(false); // 是否正在加载更多会话
+const showConversationDrawer = ref(false); // 是否显示对话列表抽屉
 
 onMounted(() => {
     // 初始化主题（默认或者根据系统偏好）
@@ -323,6 +388,8 @@ const handleConversationSelect = async (option) => {
         resetConversation();
         currentConversationId.value = '';
         chatList.value = [];
+        // 关闭抽屉
+        showConversationDrawer.value = false;
         return;
     }
 
@@ -667,6 +734,17 @@ const loadMoreConversations = async () => {
         loadingMoreConversations.value = false;
     }
 };
+
+// 处理新建对话
+const handleNewConversation = () => {
+    console.log('创建新对话');
+    // 重置会话状态
+    resetConversation();
+    currentConversationId.value = '';
+    chatList.value = [];
+    // 关闭抽屉
+    showConversationDrawer.value = false;
+};
 </script>
 
 <style lang="scss">
@@ -706,17 +784,100 @@ const loadMoreConversations = async () => {
             transform: translateY(-1px);
         }
     }
+
+    .header-icon {
+        color: $text-color-secondary;
+        &:hover {
+            color: $brand-color;
+        }
+    }
+
+    .header-title {
+        font-size: $font-size-body-medium;
+        color: $text-color-primary;
+        font-weight: 500;
+        text-align: center;
+        max-width: 60%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        
+        @media (max-width: 768px) {
+            font-size: $font-size-body-small;
+            max-width: 50%;
+        }
+    }
+}
+
+/* 对话列表抽屉样式 */
+.t-drawer {
+    .conversation-item {
+        display: flex;
+        align-items: center;
+        padding: $comp-paddingTB-s $comp-paddingLR-m;
+        margin-bottom: $size-1;
+        border-radius: $radius-default;
+        transition: all 0.3s ease;
+        position: relative;
+        
+        &:hover {
+            background-color: $bg-color-container-hover;
+            
+            .delete-btn {
+                opacity: 1;
+            }
+        }
+        
+        &.active {
+            background-color: $brand-color-light;
+            color: $brand-color;
+            
+            .conversation-icon {
+                color: $brand-color;
+            }
+        }
+        
+        .conversation-icon {
+            margin-right: $size-2;
+            color: $text-color-secondary;
+        }
+        
+        .conversation-text {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .delete-btn {
+            opacity: 0;
+            color: $text-color-secondary;
+            transition: all 0.3s ease;
+            
+            &:hover {
+                color: $error-color;
+                background-color: $error-color-light;
+            }
+        }
+    }
+    
+    .load-more-item {
+        display: flex;
+        justify-content: center;
+        padding: $comp-paddingTB-s 0;
+    }
 }
 
 .chat-container {
     height: 100vh;
     width: 100vw;
-    padding: $comp-size-xl $size-2 $comp-paddingLR-s; /* 增加顶部padding，为固定头部留出空间 */
+    padding: $comp-size-xxxl $size-2 $comp-margin-l;
+    padding-top: 70px; /* 确保不被头部遮挡 */
     transition: padding 0.3s ease;
     background-color: $bg-color-page;
     
     @media (max-width: 768px) {
-        padding-top: $comp-size-l;
+        padding-top: 60px; /* 移动端调整 */
     }
 
     .t-space {
@@ -753,30 +914,5 @@ const loadMoreConversations = async () => {
     margin-top: $size-3;
     margin-left: $size-4;
     transition: all 0.3s ease;
-}
-
-.conversation-dropdown {
-    margin: 0 $comp-paddingLR-s;
-    transition: all 0.3s ease;
-
-    .conversation-selector {
-        max-width: $comp-size-xxxxxl;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        font-size: $font-size-body-medium;
-        transition: all 0.25s ease;
-        color: $text-color-primary;
-
-        &:hover {
-            background-color: $bg-color-container-hover;
-            color: $brand-color;
-        }
-        
-        @media (max-width: 768px) {
-            max-width: $comp-size-xxxl;
-            font-size: $font-size-body-small;
-        }
-    }
 }
 </style>
