@@ -867,7 +867,19 @@ const cancelDelete = () => {
 }
 
 .dialog-content {
+    padding: $comp-paddingTB-l $comp-paddingLR-l;
+    text-align: center;
     font-size: $font-size-body-medium;
+    color: $text-color-primary;
+}
+
+/* 聊天输入框高度自定义 */
+.t-chat-input {
+    .t-textarea__inner {
+        min-height: 40px !important;
+        height: 40px !important;
+        line-height: 20px !important;
+    }
 }
 
 .loading-space {

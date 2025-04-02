@@ -2,7 +2,8 @@
   <div class="chat-sender">
     <t-chat-input v-model="query" :stop-disabled="loading" :textarea-props="{
       placeholder: '请输入消息...',
-    }" @send="handleSend" @stop="handleStop">
+      class: 'custom-textarea'
+    }" @send="handleSend" @stop="handleStop" autosize>
     </t-chat-input>
   </div>
 </template>
@@ -50,6 +51,6 @@ const handleStop = () => {
 }
 
 .t-chat__footer .t-chat__footer__content {
-    margin-top: 0 !important;
+  margin-top: 0 !important;
 }
 </style>

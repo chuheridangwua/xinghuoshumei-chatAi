@@ -61,13 +61,22 @@
                     加载更多会话
                 </t-button>
             </div>
+            
+            <!-- 主题切换按钮 -->
+            <div class="theme-toggle-container">
+                <t-button variant="text" size="small" class="theme-toggle-btn" @click="toggleTheme">
+                    <t-icon :name="currentTheme === 'dark' ? 'sunny' : 'moon'" />
+                    <span class="theme-text">{{ currentTheme === 'dark' ? '切换到亮色模式' : '切换到暗色模式' }}</span>
+                </t-button>
+            </div>
         </t-list>
     </t-drawer>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import ConversationGroup from './ConversationGroup.vue';
+import { getThemeMode, toggleThemeMode, ThemeMode } from '/static/app/api/theme.js';
 
 // 组件属性
 const props = defineProps({
@@ -96,6 +105,20 @@ const props = defineProps({
         type: Boolean,
         default: false
     }
+});
+
+// 添加主题相关状态
+const currentTheme = ref(getThemeMode());
+
+// 主题切换方法
+const toggleTheme = () => {
+    toggleThemeMode();
+    currentTheme.value = getThemeMode();
+};
+
+// 在组件挂载时获取当前主题
+onMounted(() => {
+    currentTheme.value = getThemeMode();
 });
 
 // 定义事件
@@ -146,5 +169,38 @@ const emit = defineEmits(['update:visible', 'select', 'new-conversation', 'load-
     padding: $comp-paddingTB-s 0;
     margin-top: $comp-margin-s;
     border-top: 1px solid $component-stroke;
+}
+
+.theme-toggle-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    padding: $comp-paddingTB-s 0;
+    border-top: 1px solid $component-stroke;
+}
+
+.theme-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: $text-color-secondary;
+    transition: color 0.3s ease;
+    
+    &:hover {
+        color: $brand-color;
+    }
+    
+    .t-icon {
+        margin-right: $size-2;
+        font-size: 16px;
+    }
+    
+    .theme-text {
+        font-size: $font-size-body-small;
+        line-height: 1.2;
+    }
 }
 </style>
