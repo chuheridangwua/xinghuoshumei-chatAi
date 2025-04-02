@@ -5,7 +5,7 @@
 // 统一的API配置
 const MODEL_CONFIG = {
     baseURL: 'http://192.168.79.122:8083/v1',
-    apiKey: 'app-GpJXezVwZC2uD3urb50X4kVm'
+    apiKey: 'app-JUQYZhaSvAhw9YtuhOCo66A6'
 };
 
 /**
@@ -222,68 +222,32 @@ export const getServerConversationHistory = async (conversationId, options = {})
 
 /**
  * 获取聊天历史
+ * @param {String} conversationId - 会话ID
+ * @param {Object} options - 分页选项
  * @returns {Promise<Array>} 聊天历史数组
  */
-export const getChatHistory = () => {
+export const getChatHistory = async (conversationId, options = {}) => {
     console.log('获取聊天记录');
-    return new Promise((resolve) => {
-        try {
-            const data = localStorage.getItem('chatHistory');
-            if (data) {
-                const parsedData = JSON.parse(data);
-                if (Array.isArray(parsedData) && parsedData.length > 0) {
-                    console.log('获取聊天记录成功', parsedData);
-                    resolve(parsedData);
-                } else {
-                    console.log('聊天记录为空或格式不正确');
-                    resolve([]);
-                }
-            } else {
-                console.log('没有聊天记录');
-                resolve([]);
-            }
-        } catch (err) {
-            console.error('获取聊天记录失败:', err);
-            resolve([]);
+    
+    if (!conversationId) {
+        console.log('没有有效的会话ID，无法获取聊天记录');
+        return [];
+    }
+    
+    try {
+        // 从服务器获取会话历史
+        const messages = await getServerConversationHistory(conversationId, options);
+        if (messages && messages.length > 0) {
+            console.log('获取聊天记录成功', messages.length);
+            return messages;
+        } else {
+            console.log('聊天记录为空');
+            return [];
         }
-    });
-};
-
-/**
- * 保存聊天历史到本地
- * @param {Array} chatList - 聊天记录数组
- * @returns {Promise<boolean>} 是否保存成功
- */
-export const saveChatHistory = (chatList) => {
-    console.log('保存聊天记录');
-    return new Promise((resolve) => {
-        try {
-            localStorage.setItem('chatHistory', JSON.stringify(chatList));
-            console.log('聊天记录已成功存储到本地缓存');
-            resolve(true);
-        } catch (error) {
-            console.error('存储聊天记录时发生异常:', error);
-            resolve(false);
-        }
-    });
-};
-
-/**
- * 清空聊天历史
- * @returns {Promise<boolean>} 是否清空成功
- */
-export const clearChatHistory = () => {
-    console.log('清空聊天记录');
-    return new Promise((resolve) => {
-        try {
-            localStorage.removeItem('chatHistory');
-            console.log('聊天记录已成功删除');
-            resolve(true);
-        } catch (err) {
-            console.error('删除聊天记录失败:', err);
-            resolve(false);
-        }
-    });
+    } catch (err) {
+        console.error('获取聊天记录失败:', err);
+        return [];
+    }
 };
 
 /**
@@ -300,9 +264,8 @@ export const buildMessageHistory = (chatList, currentMessage, systemPrompt, mess
     let hasSystemPrompt = false;
     let messagesToSend = [];
 
-    // 倒序遍历聊天记录，从最新消息开始，只添加用户和助手的消息，过滤掉空消息
-    for (let i = chatList.length - 1; i >= 0; i--) {
-        const item = chatList[i];
+    // 遍历聊天记录，只添加用户和助手的消息，过滤掉空消息
+    for (const item of chatList) {
         // 只考虑角色是用户、助手或系统且内容不为空的消息
         if ((item.role === 'user' || item.role === 'assistant' || item.role === 'system') && item.content.trim() !== '') {
             // 检查是否已经包含系统提示词
@@ -425,7 +388,8 @@ export const sendChatRequest = async (messages, options = {}) => {
         inputs: {},
         query: query,
         response_mode: "streaming",
-        user: userId
+        user: userId,
+        auto_generate_name: false
     };
     
     // 只有当conversation_id存在时才添加到请求中
@@ -502,12 +466,14 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
                     const data = JSON.parse(line.substring(6));
                     console.log('收到数据:', data);
                     
-                    // 保存会话ID
+                    // 保存会话ID，不使用localStorage缓存
                     if (data.conversation_id && !conversation_id) {
                         conversation_id = data.conversation_id;
                         console.log('捕获到对话ID:', conversation_id);
-                        // 保存到本地存储
-                        localStorage.setItem('dify_conversation_id', conversation_id);
+                        // 触发回调通知上层组件（如果存在）
+                        if (callbacks.onConversationIdChange) {
+                            callbacks.onConversationIdChange(conversation_id);
+                        }
                     }
                     
                     // 处理Dify API返回格式
@@ -541,6 +507,11 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
                         }
                     } else if (data.event === 'message_end') {
                         console.log('消息完成:', data);
+                        
+                        // 如果有会话ID，在消息结束时执行自动重命名的检查
+                        if (conversation_id) {
+                            autoRenameConversationIfNeeded(conversation_id);
+                        }
                     }
                 } catch (e) {
                     console.error('解析流数据失败:', e, line);
@@ -564,6 +535,59 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
 };
 
 /**
+ * 自动重命名会话（如果需要）
+ * 会在以下情况触发自动重命名：
+ * 1. 新对话的前三次对话后
+ * 2. 对话消息数量为5、10、15等（每5条消息）时
+ * @param {String} conversationId - 会话ID
+ */
+export const autoRenameConversationIfNeeded = async (conversationId) => {
+    try {
+        // 获取当前会话的消息数量
+        const messages = await getServerConversationHistory(conversationId);
+        const messageCount = messages.length;
+        
+        // 计算用户和助手消息对的数量（一问一答算一轮对话）
+        // 由于每个消息都会创建用户和助手两条记录，所以总消息数除以2就是对话轮数
+        const conversationTurns = Math.floor(messageCount / 2);
+        
+        console.log(`当前会话消息数: ${messageCount}, 对话轮数: ${conversationTurns}`);
+        
+        // 获取当前会话信息，以检查是否已经有自定义名称
+        const conversations = await getServerConversations();
+        const currentConversation = conversations.find(conv => conv.id === conversationId);
+        
+        // 判断是否需要执行自动重命名
+        // 条件：
+        // 1. 会话在前三轮对话后
+        // 2. 对话轮数为5、10、15等（每5轮执行一次）
+        // 3. 当前会话名称为空或是默认生成的名称
+        const needRename = (
+            // 新对话的前三轮，或者每5轮对话
+            (conversationTurns <= 3 || (conversationTurns >= 5 && conversationTurns % 5 === 0)) &&
+            // 会话没有名称或有默认名称
+            (!currentConversation || !currentConversation.name || currentConversation.name.startsWith('新对话') || currentConversation.name === 'New conversation')
+        );
+        
+        if (needRename) {
+            console.log(`执行自动重命名，当前对话轮数: ${conversationTurns}`);
+            
+            // 调用重命名API
+            await renameConversation(conversationId, { auto_generate: true });
+            
+            console.log(`自动重命名成功，对话轮数: ${conversationTurns}`);
+        } else {
+            console.log(`不需要执行自动重命名，当前轮数: ${conversationTurns}`);
+            if (currentConversation) {
+                console.log(`当前会话名称: "${currentConversation.name}"`);
+            }
+        }
+    } catch (error) {
+        console.error('自动重命名失败:', error);
+    }
+};
+
+/**
  * 封装的请求方法
  * @param {Array} messages - 消息数组
  * @param {Object} callbacks - 回调函数
@@ -572,16 +596,16 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
  */
 export const chatWithModel = async (messages, callbacks = {}, options = {}) => {
     try {
-        // 获取存储的conversation_id
-        const storedConversationId = options.conversation_id || localStorage.getItem('dify_conversation_id') || '';
+        // 使用传入的conversation_id，不再从localStorage获取
+        const conversationId = options.conversation_id || '';
         const requestOptions = {
             ...options,
-            conversation_id: storedConversationId
+            conversation_id: conversationId
         };
         
-        console.log('使用会话ID:', storedConversationId);
+        console.log('使用会话ID:', conversationId);
         
-        // 发送请求，使用存储的对话ID
+        // 发送请求
         const responsePromise = sendChatRequest(messages, requestOptions);
         await handleStreamResponse(responsePromise, callbacks);
         
@@ -635,11 +659,11 @@ export const loadSystemPrompt = async () => {
 };
 
 /**
- * 重置对话，清除存储的conversation_id
+ * 重置对话
+ * 不再需要清除localStorage
  */
 export const resetConversation = () => {
     try {
-        localStorage.removeItem('dify_conversation_id');
         console.log('会话已重置');
         return true;
     } catch (e) {
@@ -736,4 +760,61 @@ export const deleteConversation = async (conversationId) => {
         console.error('删除会话错误:', error);
         throw error;
     }
+};
+
+/**
+ * 获取当前会话或创建新会话
+ * 返回会话列表中的第一个会话，如果没有则返回空字符串
+ * @returns {Promise<String>} 会话ID
+ */
+export const getCurrentConversation = async () => {
+    try {
+        // 获取会话列表
+        const conversations = await getServerConversations({ limit: 1 });
+        
+        // 如果有会话，返回第一个会话的ID
+        if (conversations && conversations.length > 0) {
+            console.log('使用会话列表中的第一个会话:', conversations[0].id);
+            return conversations[0].id;
+        }
+        
+        // 如果没有会话，返回空字符串，表示创建新会话
+        console.log('没有现有会话，将创建新会话');
+        return '';
+    } catch (error) {
+        console.error('获取当前会话失败:', error);
+        return '';
+    }
+};
+
+/**
+ * 清空聊天历史
+ * 在服务端没有直接清空历史的API，此函数仅重置当前状态
+ * @param {String} conversationId - 会话ID
+ * @returns {Promise<boolean>} 是否清空成功
+ */
+export const clearChatHistory = async (conversationId) => {
+    console.log('清空聊天记录');
+    try {
+        if (conversationId) {
+            // 如果有会话ID，删除该会话
+            await deleteConversation(conversationId);
+            console.log('已删除会话:', conversationId);
+        }
+        console.log('聊天记录已清空');
+        return true;
+    } catch (err) {
+        console.error('清空聊天记录失败:', err);
+        return false;
+    }
+};
+
+/**
+ * 保存聊天历史到本地（兼容性实现，不再执行实际操作）
+ * @param {Array} chatList - 聊天记录数组
+ * @returns {Promise<boolean>} 始终返回true
+ */
+export const saveChatHistory = (chatList) => {
+    console.log('保存聊天记录请求已忽略，聊天历史数据现已从服务器获取');
+    return Promise.resolve(true);
 };

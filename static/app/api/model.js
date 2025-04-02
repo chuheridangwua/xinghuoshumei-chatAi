@@ -5,7 +5,7 @@ export const modelConfig = {
     'dify-api': {
         instance: {
             baseURL: 'http://192.168.79.122:8083/v1',
-            apiKey: 'app-GpJXezVwZC2uD3urb50X4kVm',
+            apiKey: 'app-JUQYZhaSvAhw9YtuhOCo66A6',
             dangerouslyAllowBrowser: true
         },
         description: 'Dify API 模型'
@@ -252,12 +252,14 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
                     const data = JSON.parse(line.substring(6));
                     console.log('收到数据:', data);
                     
-                    // 保存会话ID
+                    // 保存会话ID，不使用localStorage
                     if (data.conversation_id && !conversation_id) {
                         conversation_id = data.conversation_id;
                         console.log('捕获到对话ID:', conversation_id);
-                        // 保存到本地存储
-                        localStorage.setItem('dify_conversation_id', conversation_id);
+                        // 使用回调通知上层组件
+                        if (callbacks.onConversationIdChange) {
+                            callbacks.onConversationIdChange(conversation_id);
+                        }
                     }
                     
                     // 处理Dify API返回格式
@@ -322,16 +324,16 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
  */
 export const chatWithModel = async (messages, callbacks = {}, options = {}) => {
     try {
-        // 获取存储的conversation_id
-        const storedConversationId = options.conversation_id || localStorage.getItem('dify_conversation_id') || '';
+        // 直接使用传入的会话ID
+        const conversationId = options.conversation_id || '';
         const requestOptions = {
             ...options,
-            conversation_id: storedConversationId
+            conversation_id: conversationId
         };
         
-        console.log('使用会话ID:', storedConversationId);
+        console.log('使用会话ID:', conversationId);
         
-        // 发送请求，使用存储的对话ID
+        // 发送请求
         const responsePromise = sendChatRequest(messages, requestOptions);
         await handleStreamResponse(responsePromise, callbacks);
         
@@ -373,11 +375,10 @@ export const loadSystemPrompt = async () => {
 };
 
 /**
- * 重置对话，清除存储的conversation_id
+ * 重置对话
  */
 export const resetConversation = () => {
     try {
-        localStorage.removeItem('dify_conversation_id');
         console.log('会话已重置');
         return true;
     } catch (e) {

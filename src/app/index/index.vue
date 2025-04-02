@@ -59,7 +59,9 @@ import {
     getServerConversations,
     getServerConversationHistory,
     renameConversation,
-    deleteConversation
+    deleteConversation,
+    getCurrentConversation,
+    autoRenameConversationIfNeeded
 } from '/static/app/api/chat.js';
 import {
     createRequestController,
@@ -224,23 +226,28 @@ const initChatData = async () => {
             // 判断是否还有更多对话可加载
             hasMoreConversations.value = serverConversations.length >= 20;
 
-            // 如果存在会话，加载最近的一个会话
-            if (serverConversations.length > 0) {
-                currentConversationId.value = serverConversations[0].id;
-                await loadConversationHistory(currentConversationId.value);
+            // 获取默认会话ID
+            const defaultConversationId = await getCurrentConversation();
+            if (defaultConversationId) {
+                currentConversationId.value = defaultConversationId;
+                await loadConversationHistory(defaultConversationId);
             } else {
-                // 如果没有会话，尝试获取本地聊天记录
-                chatList.value = await getChatHistory();
+                // 如果没有会话，创建新会话
+                currentConversationId.value = '';
+                chatList.value = [];
+                console.log('没有现有会话，准备创建新会话');
             }
         } else {
             console.error('服务器返回的会话列表数据格式不正确:', serverConversations);
-            // 获取本地聊天记录作为备用
-            chatList.value = await getChatHistory();
+            // 创建新会话
+            currentConversationId.value = '';
+            chatList.value = [];
         }
     } catch (error) {
         console.error('获取服务器会话列表失败:', error);
-        // 获取本地聊天记录作为备用
-        chatList.value = await getChatHistory();
+        // 创建新会话
+        currentConversationId.value = '';
+        chatList.value = [];
     }
 };
 
@@ -300,13 +307,9 @@ const loadConversationHistory = async (conversationId, resetPage = true) => {
             console.log('没有更多消息可加载');
         }
 
-        // 存储当前会话ID到缓存
-        localStorage.setItem('dify_conversation_id', conversationId);
-
         // 保存到本地缓存
         if (chatList.value && Array.isArray(chatList.value) && chatList.value.length > 0) {
-            await saveChatHistory(chatList.value);
-            console.log('历史消息已保存到本地');
+            console.log('历史消息已加载完成');
         }
 
         return true;
@@ -425,7 +428,7 @@ const onStop = function () {
         handleRequestAbort(lastItem, { loading, isStreamLoad });
 
         // 保存聊天记录
-        saveChatHistory(chatList.value);
+        // saveChatHistory(chatList.value);
 
         // 尝试取消请求 - 这一步放在状态更新之后
         if (fetchCancel.value) {
@@ -595,10 +598,17 @@ const handleModelRequest = async (inputValue) => {
                     const isAborted = handleRequestError(error, lastItem, { loading, isStreamLoad });
 
                     // 保存聊天记录
-                    saveChatHistory(chatList.value);
+                    // saveChatHistory(chatList.value);
 
                     // 清除中断函数
                     fetchCancel.value = null;
+                },
+                // 会话ID变更处理
+                onConversationIdChange: (newId) => {
+                    console.log('接收到新会话ID:', newId);
+                    if (newId && !currentConversationId.value) {
+                        currentConversationId.value = newId;
+                    }
                 },
                 // 请求完成
                 onComplete: async (isOk, msg) => {
@@ -612,31 +622,36 @@ const handleModelRequest = async (inputValue) => {
 
                     // 保存聊天记录（添加防护措施）
                     if (chatList.value && Array.isArray(chatList.value)) {
-                        await saveChatHistory(chatList.value);
+                        // 不再保存到本地
+                        // await saveChatHistory(chatList.value);
                     } else {
-                        console.error('保存聊天记录失败：chatList.value 无效');
+                        console.error('聊天列表无效');
                     }
 
                     // 如果是新会话，需要更新当前会话ID并刷新会话列表
-                    if (!currentConversationId.value && isOk) {
-                        // 从存储中获取新生成的会话ID
-                        const newConversationId = localStorage.getItem('dify_conversation_id');
-                        if (newConversationId) {
-                            currentConversationId.value = newConversationId;
-
-                            // 刷新会话列表
+                    if (isOk) {
+                        // 尝试手动触发自动重命名
+                        if (currentConversationId.value) {
                             try {
-                                const serverConversations = await getServerConversations({
-                                    limit: 20,
-                                    sort_by: '-updated_at'
-                                });
-                                if (serverConversations && Array.isArray(serverConversations)) {
-                                    conversationList.value = serverConversations;
-                                    console.log('更新会话列表成功');
-                                }
+                                console.log('手动触发自动重命名检查');
+                                await autoRenameConversationIfNeeded(currentConversationId.value);
                             } catch (error) {
-                                console.error('更新会话列表失败:', error);
+                                console.error('手动触发自动重命名失败:', error);
                             }
+                        }
+
+                        // 无论是否是新会话，都刷新会话列表
+                        try {
+                            const serverConversations = await getServerConversations({
+                                limit: 20,
+                                sort_by: '-updated_at'
+                            });
+                            if (serverConversations && Array.isArray(serverConversations)) {
+                                conversationList.value = serverConversations;
+                                console.log('更新会话列表成功');
+                            }
+                        } catch (error) {
+                            console.error('更新会话列表失败:', error);
                         }
                     }
                 }
@@ -652,7 +667,7 @@ const handleModelRequest = async (inputValue) => {
         handleRequestError(error, lastItem, { loading, isStreamLoad });
 
         // 保存聊天记录
-        saveChatHistory(chatList.value);
+        // saveChatHistory(chatList.value);
 
         // 清空中断函数，防止内存泄漏
         fetchCancel.value = null;
@@ -867,10 +882,7 @@ const cancelDelete = () => {
 }
 
 .dialog-content {
-    padding: $comp-paddingTB-l $comp-paddingLR-l;
-    text-align: center;
     font-size: $font-size-body-medium;
-    color: $text-color-primary;
 }
 
 /* 聊天输入框高度自定义 */
