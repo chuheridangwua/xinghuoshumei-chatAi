@@ -28,7 +28,7 @@
         <t-dialog width="80%" v-model:visible="showRenameDialog" header="重命名对话"
             :confirm-btn="{ content: '确定', theme: 'primary' }" :cancel-btn="{ content: '取消', theme: 'default' }"
             @confirm="confirmRename" @close="cancelRename">
-            <t-input v-model="renameInput" placeholder="请输入新名称" clearable autofocus @keydown.enter="confirmRename" />
+            <t-input v-model="renameInput" type="text" :maxlength="100" placeholder="请输入新名称" clearable autofocus @enter="confirmRename" />
         </t-dialog>
 
         <!-- 删除对话确认框 - 基于整个页面 -->

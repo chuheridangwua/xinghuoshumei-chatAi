@@ -1,3 +1,10 @@
+// 导入chat.js中的函数
+import { 
+    ensureUserId, 
+    getServerConversations as getConversationList,
+    getServerConversationHistory as getConversationHistory 
+} from './chat.js';
+
 /**
  * 模型配置
  */
@@ -18,124 +25,6 @@ export const modelConfig = {
  */
 export const getModelInstance = () => {
     return modelConfig['dify-api'].instance;
-};
-
-/**
- * 确保用户ID存在
- * @returns {String} 用户ID
- */
-export const ensureUserId = () => {
-    let userId = localStorage.getItem('dify_user_id');
-    if (!userId) {
-        // 生成随机用户ID
-        userId = 'user_' + Math.random().toString(36).substring(2, 15);
-        localStorage.setItem('dify_user_id', userId);
-    }
-    return userId;
-};
-
-/**
- * 获取会话列表
- * @param {Object} options - 选项参数
- * @param {String} options.last_id - 当前页最后面一条记录的ID
- * @param {Number} options.limit - 一次请求返回多少条记录
- * @param {String} options.sort_by - 排序字段
- * @returns {Promise} 请求Promise
- */
-export const getConversationList = async (options = {}) => {
-    const model = getModelInstance();
-    const userId = ensureUserId();
-
-    try {
-        // 构建URL参数
-        const url = new URL(`${model.baseURL}/conversations`);
-        
-        // 添加用户ID，必选参数
-        url.searchParams.append('user', userId);
-        
-        // 添加可选参数
-        if (options.last_id) {
-            url.searchParams.append('last_id', options.last_id);
-        }
-        
-        if (options.limit) {
-            url.searchParams.append('limit', options.limit);
-        }
-        
-        if (options.sort_by) {
-            url.searchParams.append('sort_by', options.sort_by);
-        }
-        
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${model.apiKey}`
-            }
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`获取会话列表失败: ${response.status} ${errorText}`);
-        }
-
-        const data = await response.json();
-        
-        // 按时间顺序排序会话，最新的在前面
-        if (data && Array.isArray(data.data)) {
-            data.data.sort((a, b) => {
-                const dateA = new Date(a.created_at || 0);
-                const dateB = new Date(b.created_at || 0);
-                return dateB - dateA;
-            });
-            return data.data;
-        }
-        
-        return data.data || [];
-    } catch (error) {
-        console.error('获取会话列表错误:', error);
-        throw error;
-    }
-};
-
-/**
- * 获取会话历史消息
- * @param {String} conversationId - 会话ID
- * @param {Object} options - 选项(page, pageSize等分页参数)
- * @returns {Promise} 请求Promise
- */
-export const getConversationHistory = async (conversationId, options = {}) => {
-    const model = getModelInstance();
-    const userId = ensureUserId();
-    
-    const { page = 1, pageSize = 20 } = options;
-    
-    try {
-        const url = new URL(`${model.baseURL}/messages`);
-        url.searchParams.append('conversation_id', conversationId);
-        url.searchParams.append('user', userId);
-        url.searchParams.append('page', page);
-        url.searchParams.append('page_size', pageSize);
-        
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${model.apiKey}`
-            }
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`获取会话历史失败: ${response.status} ${errorText}`);
-        }
-
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error('获取会话历史错误:', error);
-        throw error;
-    }
 };
 
 /**
@@ -212,7 +101,6 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
         while (true) {
             // 检查是否请求已被中断（AbortController信号）
             if (responsePromise.signal && responsePromise.signal.aborted) {
-                console.log('请求已被用户中断，停止处理流');
                 onComplete?.(false, '请求已中断');
                 return;
             }
@@ -235,12 +123,10 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
                 
                 try {
                     const data = JSON.parse(line.substring(6));
-                    console.log('收到数据:', data);
                     
                     // 保存会话ID，不使用localStorage
                     if (data.conversation_id && !conversation_id) {
                         conversation_id = data.conversation_id;
-                        console.log('捕获到对话ID:', conversation_id);
                         // 使用回调通知上层组件
                         if (callbacks.onConversationIdChange) {
                             callbacks.onConversationIdChange(conversation_id);
@@ -277,8 +163,6 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
                             onMessage?.(answer);
                         }
                     } else if (data.event === 'message_end') {
-                        console.log('消息完成:', data);
-                        
                         // 消息结束时，只保存消息ID，不直接获取建议问题
                         if (data.message_id && callbacks.onMessageIdChange) {
                             // 通知消息ID变更
@@ -291,7 +175,7 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
                         }
                     }
                 } catch (e) {
-                    console.error('解析流数据失败:', e, line);
+                    console.error('解析流数据失败:', e);
                 }
             }
         }
@@ -302,7 +186,6 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
 
         // 判断是否是AbortError（请求被中断）
         if (error.name === 'AbortError' || error.message.includes('aborted')) {
-            console.log('流式请求被用户中断');
             onComplete?.(false, '请求已中断');
         } else {
             onError?.(error.message || '请求失败');
@@ -326,8 +209,6 @@ export const chatWithModel = async (messages, callbacks = {}, options = {}) => {
             ...options,
             conversation_id: conversationId
         };
-        
-        console.log('使用会话ID:', conversationId);
         
         // 发送请求
         const responsePromise = sendChatRequest(messages, requestOptions);
@@ -355,7 +236,7 @@ export const loadSystemPrompt = async () => {
         } else {
             console.error(`加载系统提示词失败: ${response.status}`);
             return {
-                role: "您是一个助手1",
+                role: "您是一个助手",
                 tools: { description: "" },
                 rules: []
             };
@@ -363,7 +244,7 @@ export const loadSystemPrompt = async () => {
     } catch (error) {
         console.error('加载系统提示词失败:', error);
         return {
-            role: "您是一个助手3",
+            role: "您是一个助手",
             tools: { description: "" },
             rules: []
         };
