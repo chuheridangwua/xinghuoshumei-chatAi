@@ -647,3 +647,93 @@ export const resetConversation = () => {
         return false;
     }
 };
+
+/**
+ * 重命名会话
+ * @param {String} conversationId - 会话ID
+ * @param {Object} options - 选项
+ * @param {String} options.name - 名称，若auto_generate为true时可不传
+ * @param {Boolean} options.auto_generate - 是否自动生成标题，默认false
+ * @returns {Promise<Object>} 请求结果
+ */
+export const renameConversation = async (conversationId, options = {}) => {
+    const model = MODEL_CONFIG;
+    const userId = ensureUserId();
+    
+    try {
+        // 创建请求体
+        const requestBody = {
+            user: userId
+        };
+        
+        // 添加name或auto_generate
+        if (options.auto_generate) {
+            requestBody.auto_generate = true;
+        } else if (options.name) {
+            requestBody.name = options.name;
+        }
+        
+        console.log('重命名会话，请求体:', requestBody);
+        
+        const response = await fetch(`${model.baseURL}/conversations/${conversationId}/name`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${model.apiKey}`
+            },
+            body: JSON.stringify(requestBody)
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`重命名会话失败: ${response.status} ${errorText}`);
+        }
+        
+        const data = await response.json();
+        console.log('重命名会话成功:', data);
+        return data;
+    } catch (error) {
+        console.error('重命名会话错误:', error);
+        throw error;
+    }
+};
+
+/**
+ * 删除会话
+ * @param {String} conversationId - 会话ID
+ * @returns {Promise<Object>} 请求结果
+ */
+export const deleteConversation = async (conversationId) => {
+    const model = MODEL_CONFIG;
+    const userId = ensureUserId();
+    
+    try {
+        // 创建请求体
+        const requestBody = {
+            user: userId
+        };
+        
+        console.log('删除会话，请求体:', requestBody);
+        
+        const response = await fetch(`${model.baseURL}/conversations/${conversationId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${model.apiKey}`
+            },
+            body: JSON.stringify(requestBody)
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`删除会话失败: ${response.status} ${errorText}`);
+        }
+        
+        const data = await response.json();
+        console.log('删除会话成功:', data);
+        return data;
+    } catch (error) {
+        console.error('删除会话错误:', error);
+        throw error;
+    }
+};

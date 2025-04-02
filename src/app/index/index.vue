@@ -6,7 +6,8 @@
         <ConversationDrawer v-model:visible="showConversationDrawer" :current-conversation-id="currentConversationId"
             :grouped-conversations="groupedConversations" :has-more-conversations="hasMoreConversations"
             :loading-more-conversations="loadingMoreConversations" @select="handleConversationSelect"
-            @new-conversation="handleNewConversation" @load-more="loadMoreConversations" />
+            @new-conversation="handleNewConversation" @load-more="loadMoreConversations"
+            @rename-conversation="showRenameDialogFor" @pin-conversation="handlePinConversation" />
 
         <t-chat class="chat-container" ref="chatRef" layout="both" :clear-history="false" @clear="clearConfirm"
             @scroll="handleScroll">
@@ -22,6 +23,20 @@
                 <chat-sender :loading="loading" @send="inputEnter" @stop="onStop" />
             </template>
         </t-chat>
+
+        <!-- 重命名对话弹窗 - 基于整个页面 -->
+        <t-dialog width="80%" v-model:visible="showRenameDialog" header="重命名对话"
+            :confirm-btn="{ content: '确定', theme: 'primary' }" :cancel-btn="{ content: '取消', theme: 'default' }"
+            @confirm="confirmRename" @close="cancelRename">
+            <t-input v-model="renameInput" placeholder="请输入新名称" clearable autofocus @keydown.enter="confirmRename" />
+        </t-dialog>
+
+        <!-- 删除对话确认框 - 基于整个页面 -->
+        <t-dialog width="80%" v-model:visible="showDeleteDialog" header="删除对话" 
+            :confirm-btn="{ content: '确定', theme: 'danger' }" :cancel-btn="{ content: '取消', theme: 'default' }"
+            @confirm="confirmDelete" @close="cancelDelete">
+            <p class="dialog-content">确定要删除该对话吗？此操作不可恢复。</p>
+        </t-dialog>
     </div>
 </template>
 
@@ -42,7 +57,9 @@ import {
     createUserMessage,
     createAssistantMessage,
     getServerConversations,
-    getServerConversationHistory
+    getServerConversationHistory,
+    renameConversation,
+    deleteConversation
 } from '/static/app/api/chat.js';
 import {
     createRequestController,
@@ -57,21 +74,21 @@ import { initTheme, setThemeMode, ThemeMode } from '/static/app/api/theme.js';
 const getConversationTitle = (conversation, maxLength = 20) => {
     if (!conversation) return '新对话';
 
-    // 尝试使用最近的用户消息作为标题
+    // 优先使用name字段
+    if (conversation.name) {
+        return conversation.name.length > maxLength
+            ? conversation.name.substring(0, maxLength) + '...'
+            : conversation.name;
+    }
+
+    // 其次尝试使用最近的用户消息作为标题
     if (conversation.last_message && conversation.last_message.trim()) {
         return conversation.last_message.length > maxLength
             ? conversation.last_message.substring(0, maxLength) + '...'
             : conversation.last_message;
     }
 
-    // 如果没有last_message但有name且不是默认名称
-    if (conversation.name && conversation.name !== 'New conversation') {
-        return conversation.name.length > maxLength
-            ? conversation.name.substring(0, maxLength) + '...'
-            : conversation.name;
-    }
-
-    // 如果没有最近消息，使用ID的一部分
+    // 如果没有名称和最近消息，使用ID的一部分
     return `对话 ${conversation.id.substring(0, 8)}...`;
 };
 
@@ -98,6 +115,15 @@ const scrollTopThreshold = 50; // 滚动到顶部触发阈值
 const hasMoreConversations = ref(true); // 是否有更多会话可加载
 const loadingMoreConversations = ref(false); // 是否正在加载更多会话
 const showConversationDrawer = ref(false); // 是否显示对话列表抽屉
+
+// 重命名对话相关状态
+const showRenameDialog = ref(false);
+const renameInput = ref('');
+const currentEditingId = ref('');
+
+// 删除对话相关状态
+const showDeleteDialog = ref(false);
+const currentDeletingId = ref('');
 
 onMounted(() => {
     // 初始化主题（默认或者根据系统偏好）
@@ -306,20 +332,12 @@ const handleConversationSelect = async (option) => {
     // 处理删除选项
     if (typeof value === 'string' && value.startsWith('delete-')) {
         const conversationId = value.substring(7); // 去掉"delete-"前缀
-        console.log('删除对话:', conversationId);
-
-        // TODO: 调用API删除对话
-        // 暂时从列表中移除
-        conversationList.value = conversationList.value.filter(c => c.id !== conversationId);
-
-        // 如果删除的是当前对话，切换到新对话
-        if (currentConversationId.value === conversationId) {
-            resetConversation();
-            chatList.value = [];
-            currentConversationId.value = '';
-        }
-
-        // 不关闭抽屉，让用户可以继续操作
+        console.log('准备删除对话:', conversationId);
+        
+        // 显示删除确认框
+        currentDeletingId.value = conversationId;
+        showDeleteDialog.value = true;
+        
         return;
     }
 
@@ -693,6 +711,124 @@ const handleNewConversation = () => {
     // 关闭抽屉
     showConversationDrawer.value = false;
 };
+
+// 处理对话重命名
+const handleRenameConversation = async ({ conversationId, name }) => {
+    console.log('重命名对话:', conversationId, name);
+
+    try {
+        // 调用重命名API
+        const result = await renameConversation(conversationId, { name });
+        console.log('重命名成功:', result);
+
+        // 更新本地会话列表中的名称
+        conversationList.value = conversationList.value.map(conversation => {
+            if (conversation.id === conversationId) {
+                return {
+                    ...conversation,
+                    name: result.name || name
+                };
+            }
+            return conversation;
+        });
+
+        // 显示成功消息
+        // 如果有消息提示组件可以在这里使用
+    } catch (error) {
+        console.error('重命名对话失败:', error);
+        // 显示错误消息
+    }
+};
+
+// 处理对话置顶
+const handlePinConversation = ({ conversationId }) => {
+    console.log('置顶对话:', conversationId);
+
+    // 查找要置顶的对话
+    const conversation = conversationList.value.find(c => c.id === conversationId);
+    if (!conversation) return;
+
+    // 从列表中移除
+    conversationList.value = conversationList.value.filter(c => c.id !== conversationId);
+
+    // 添加到列表开头
+    conversationList.value.unshift(conversation);
+
+    // 关闭抽屉
+    showConversationDrawer.value = false;
+
+    // TODO: 如果后端支持会话置顶，可以在这里调用API
+};
+
+// 显示重命名对话框
+const showRenameDialogFor = ({ conversationId }) => {
+    currentEditingId.value = conversationId;
+
+    // 找到当前对话
+    const conversation = conversationList.value.find(c => c.id === conversationId);
+    if (conversation) {
+        renameInput.value = conversation.name || getConversationTitle(conversation, 100);
+    }
+
+    showRenameDialog.value = true;
+};
+
+// 确认重命名
+const confirmRename = () => {
+    if (currentEditingId.value && renameInput.value.trim()) {
+        handleRenameConversation({
+            conversationId: currentEditingId.value,
+            name: renameInput.value.trim()
+        });
+    }
+    showRenameDialog.value = false;
+    renameInput.value = '';
+    currentEditingId.value = '';
+};
+
+// 取消重命名
+const cancelRename = () => {
+    showRenameDialog.value = false;
+    renameInput.value = '';
+    currentEditingId.value = '';
+};
+
+// 确认删除对话
+const confirmDelete = async () => {
+    if (!currentDeletingId.value) {
+        showDeleteDialog.value = false;
+        return;
+    }
+    
+    try {
+        // 调用API删除对话
+        const result = await deleteConversation(currentDeletingId.value);
+        console.log('服务器删除对话成功:', result);
+        
+        // 从本地列表中移除
+        conversationList.value = conversationList.value.filter(c => c.id !== currentDeletingId.value);
+
+        // 如果删除的是当前对话，切换到新对话
+        if (currentConversationId.value === currentDeletingId.value) {
+            resetConversation();
+            chatList.value = [];
+            currentConversationId.value = '';
+        }
+    } catch (error) {
+        console.error('删除对话失败:', error);
+        // 可以在这里添加错误提示
+    } finally {
+        // 关闭对话框并清除状态
+        showDeleteDialog.value = false;
+        currentDeletingId.value = '';
+    }
+};
+
+// 取消删除对话
+const cancelDelete = () => {
+    showDeleteDialog.value = false;
+    currentDeletingId.value = '';
+};
 </script>
 
 <style lang="scss">
@@ -728,6 +864,10 @@ const handleNewConversation = () => {
             box-shadow: $shadow-2;
         }
     }
+}
+
+.dialog-content {
+    font-size: $font-size-body-medium;
 }
 
 .loading-space {
