@@ -33,6 +33,7 @@ defineEmits(['open-drawer', 'new-conversation']);
 @import '/static/app/styles/variables.scss';
 
 .fixed-header {
+    box-sizing: border-box;
     position: fixed;
     top: 0;
     left: 0;
@@ -46,10 +47,6 @@ defineEmits(['open-drawer', 'new-conversation']);
     border-bottom: 1px solid $component-stroke;
     box-shadow: $shadow-1;
     transition: all 0.3s ease;
-
-    @media (max-width: 768px) {
-        padding: $comp-paddingLR-xs $comp-paddingLR-s;
-    }
 
     .t-button {
         transition: all 0.25s ease;

@@ -10,54 +10,15 @@
             :loading-more-conversations="loadingMoreConversations" @select="handleConversationSelect"
             @new-conversation="handleNewConversation" @load-more="loadMoreConversations" />
 
-        <t-chat class="chat-container" ref="chatRef" layout="both" :clear-history="chatList.length > 0 && !isStreamLoad"
-            @clear="clearConfirm" @scroll="handleScroll">
-            <!-- 对话列表选择器 -->
-
-
-            <template #header v-if="hasMoreMessages && currentConversationId">
-                <!-- 加载更多指示器 -->
-                <t-loading v-if="loadingMore" size="small" />
-                <t-button v-else variant="text" size="small" @click="loadMoreHistory">加载更多</t-button>
-            </template>
-
-
+        <t-chat class="chat-container" ref="chatRef" layout="both" :clear-history="false" @clear="clearConfirm"
+            @scroll="handleScroll">
             <template v-for="(item, index) in chatList" :key="index">
-
-                <t-chat-item :avatar="item.avatar" :name="item.name" :role="item.role" :datetime="item.datetime"
-                    :content="item.content">
-                    <template #content>
-                        <!-- 只有助手消息且有思考内容才显示思考框 -->
-                        <t-chat-reasoning v-if="item.reasoning && item.reasoning.trim() && item.role === 'assistant'"
-                            expand-icon-placement="right"
-                            @expand-change="(expandValue) => handleChange(expandValue, { index })">
-                            <template #header>
-                                <t-chat-loading v-if="loading && index === 0" text="思考中..." indicator />
-                                <div v-else class="reasoning-header">
-                                    <t-icon name="dart-board"></t-icon>
-                                    <span>思考过程</span>
-                                </div>
-                            </template>
-                            <t-chat-content :content="item.reasoning || ''" />
-                        </t-chat-reasoning>
-                        <!-- 显示消息内容，如果没有则显示占位 -->
-                        <t-chat-content v-if="item.content && item.content.trim().length > 0" :content="item.content" />
-                    </template>
-
-                    <!-- 第一条消息且正在加载时显示加载动画 -->
-                    <template v-if="index === 0 && loading && !firstTokenReceived" #content>
-                        <div class="loading-space">
-                            <t-space>
-                                <t-chat-loading animation="moving" text="思考中..." />
-                            </t-space>
-                        </div>
-                    </template>
-                    <!-- 操作按钮，只对助手消息显示 -->
-                    <template v-if="!isStreamLoad && item.role === 'assistant'" #actions>
-                        <chat-action :is-good="isGood" :is-bad="isBad" :content="item.content || ''"
-                            @operation="(type, { e }) => handleOperation(type, { e, index })" />
-                    </template>
-                </t-chat-item>
+                <chat-item :avatar="item.avatar" :name="item.name" :role="item.role" :datetime="item.datetime"
+                    :content="item.content" :reasoning="item.reasoning" :is-first-message="index === 0"
+                    :loading="loading" :first-token-received="firstTokenReceived" :is-stream-load="isStreamLoad"
+                    :is-good="isGood" :is-bad="isBad"
+                    @reasoning-expand-change="(expandValue) => handleChange(expandValue, { index })"
+                    @operation="(type, e) => handleOperation(type, { index, e })" />
             </template>
             <template #footer>
                 <chat-sender :loading="loading" @send="inputEnter" @stop="onStop" />
@@ -73,6 +34,7 @@ import ChatAction from './comps/ChatAction.vue';
 import ChatSender from './comps/ChatSender.vue';
 import HeaderNav from './comps/HeaderNav.vue';
 import ConversationDrawer from './comps/ConversationDrawer.vue';
+import ChatItem from './comps/ChatItem.vue';
 import {
     getChatHistory,
     saveChatHistory,
@@ -473,7 +435,9 @@ const onStop = function () {
 // 用户操作
 const handleOperation = function (type, options) {
     console.log('执行操作:', type, options);
-    const { index } = options;
+    // 确保options存在并提取index
+    const index = options.index;
+
     if (type === 'good') {
         isGood.value = !isGood.value;
         isBad.value = false;
@@ -747,34 +711,14 @@ const handleNewConversation = () => {
 .chat-container {
     height: 100vh;
     width: 100vw;
-    padding: $comp-size-xxxl $size-2 $comp-margin-l;
-    padding-top: 70px;
-    /* 确保不被头部遮挡 */
+    padding: $comp-size-xxl $size-2 $comp-margin-l;
     transition: padding 0.3s ease;
     background-color: $bg-color-page;
-
-    @media (max-width: 768px) {
-        padding-top: 60px;
-        /* 移动端调整 */
-    }
 
     .t-space {
         display: flex;
         align-items: center;
         justify-content: center;
-    }
-
-    .reasoning-header {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: $text-color-primary;
-        transition: color 0.3s ease;
-
-        .t-icon {
-            margin-right: $size-2;
-            transition: all 0.3s ease;
-        }
     }
 
     .t-chat-item {
