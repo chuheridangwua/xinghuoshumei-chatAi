@@ -21,12 +21,14 @@
             </template>
             <template #footer>
                 <!-- 建议问题标签 -->
-                <div v-if="suggestedQuestions.length > 0" class="suggested-questions">
-                    <t-tag v-for="(question, qIndex) in suggestedQuestions" :key="qIndex" 
-                           theme="primary" variant="light" class="question-tag" size="medium"
-                           @click="handleSuggestedQuestion(question)">
-                        {{ question }}
-                    </t-tag>
+                <div v-if="suggestedQuestions.length > 0" class="suggested-questions-container">
+                    <div class="suggested-questions">
+                        <t-tag v-for="(question, qIndex) in suggestedQuestions" :key="qIndex" theme="primary"
+                            variant="light" class="question-tag" size="medium"
+                            @click="handleSuggestedQuestion(question)">
+                            {{ question }}
+                        </t-tag>
+                    </div>
                 </div>
                 <chat-sender :loading="loading" @send="inputEnter" @stop="onStop" />
             </template>
@@ -36,11 +38,12 @@
         <t-dialog width="80%" v-model:visible="showRenameDialog" header="重命名对话"
             :confirm-btn="{ content: '确定', theme: 'primary' }" :cancel-btn="{ content: '取消', theme: 'default' }"
             @confirm="confirmRename" @close="cancelRename">
-            <t-input v-model="renameInput" type="text" :maxlength="100" placeholder="请输入新名称" clearable autofocus @enter="confirmRename" />
+            <t-input v-model="renameInput" type="text" :maxlength="100" placeholder="请输入新名称" clearable autofocus
+                @enter="confirmRename" />
         </t-dialog>
 
         <!-- 删除对话确认框 - 基于整个页面 -->
-        <t-dialog width="80%" v-model:visible="showDeleteDialog" header="删除对话" 
+        <t-dialog width="80%" v-model:visible="showDeleteDialog" header="删除对话"
             :confirm-btn="{ content: '确定', theme: 'danger' }" :cancel-btn="{ content: '取消', theme: 'default' }"
             @confirm="confirmDelete" @close="cancelDelete">
             <p class="dialog-content">确定要删除该对话吗？此操作不可恢复。</p>
@@ -143,6 +146,8 @@ const currentTaskId = ref(null);
 const currentMessageId = ref('');
 // 添加变量保存建议问题列表
 const suggestedQuestions = ref([]);
+// 添加变量保存建议问题关联的会话ID
+const suggestedQuestionsConversationId = ref('');
 
 onMounted(() => {
     // 初始化主题（默认或者根据系统偏好）
@@ -235,7 +240,7 @@ const initChatData = async () => {
                 currentConversationId.value = defaultConversationId;
                 await loadConversationHistory(defaultConversationId);
             } else {
-                // 如果没有会话，创建新会话
+                // 如果没有会话，创建新对话
                 currentConversationId.value = '';
                 chatList.value = [];
             }
@@ -264,6 +269,11 @@ const loadConversationHistory = async (conversationId, resetPage = true) => {
         // 显示加载状态
         loadingMore.value = resetPage ? false : true;
 
+        // 切换对话时清空建议问题列表
+        if (resetPage) {
+            suggestedQuestions.value = [];
+        }
+
         // 重置分页或使用现有分页
         if (resetPage) {
             currentPage.value = 1;
@@ -289,6 +299,20 @@ const loadConversationHistory = async (conversationId, resetPage = true) => {
 
             // 判断是否还有更多消息
             hasMoreMessages.value = historyMessages.length >= pageSize.value;
+
+            // 获取最后一条AI回复的消息ID，用于获取建议问题
+            if (resetPage && historyMessages.length > 0) {
+                // 找出最后一条AI回复的消息
+                const assistantMessages = historyMessages.filter(msg => msg.role === 'assistant' && msg.id);
+                if (assistantMessages.length > 0) {
+                    // 获取最后一条AI消息的ID (移除_assistant后缀)
+                    const lastAssistantMessage = assistantMessages[assistantMessages.length - 1];
+                    const messageId = lastAssistantMessage.id.replace('_assistant', '');
+
+                    // 获取建议问题
+                    fetchSuggestedQuestions(messageId);
+                }
+            }
         } else {
             if (resetPage) {
                 chatList.value = []; // 没有消息，清空列表
@@ -322,11 +346,11 @@ const handleConversationSelect = async (option) => {
     // 处理删除选项
     if (typeof value === 'string' && value.startsWith('delete-')) {
         const conversationId = value.substring(7); // 去掉"delete-"前缀
-        
+
         // 显示删除确认框
         currentDeletingId.value = conversationId;
         showDeleteDialog.value = true;
-        
+
         return;
     }
 
@@ -336,6 +360,9 @@ const handleConversationSelect = async (option) => {
         resetConversation();
         currentConversationId.value = '';
         chatList.value = [];
+        // 清空建议问题列表
+        suggestedQuestions.value = [];
+        suggestedQuestionsConversationId.value = '';
         // 关闭抽屉
         showConversationDrawer.value = false;
         return;
@@ -388,6 +415,9 @@ const clearConfirm = async function () {
     await clearChatHistory();
     // 清空聊天记录
     chatList.value = [];
+    // 清空建议问题列表
+    suggestedQuestions.value = [];
+    suggestedQuestionsConversationId.value = '';
     // 重置当前会话
     if (currentConversationId.value) {
         resetConversation();
@@ -403,7 +433,7 @@ const onStop = async function () {
             console.log('请求已经停止，不再执行中断操作');
             return;
         }
-        
+
         // 立即重置状态 - 先更新UI再中断请求
         loading.value = false;
         isStreamLoad.value = false;
@@ -418,11 +448,11 @@ const onStop = async function () {
         // 备份中断函数并立即清空，避免重复调用
         const abortFunction = fetchCancel.value;
         fetchCancel.value = null;
-        
+
         // 备份任务ID并立即清空
         const taskId = currentTaskId.value;
         currentTaskId.value = null;
-        
+
         // 如果有任务ID，优先使用新的API停止流式响应
         if (taskId) {
             try {
@@ -432,7 +462,7 @@ const onStop = async function () {
                 console.error('API停止请求失败:', stopError);
             }
         }
-        
+
         // 最后尝试使用AbortController中断
         if (abortFunction) {
             try {
@@ -501,7 +531,7 @@ const handleModelRequest = async (inputValue) => {
 
     // 构建消息历史，确保使用正确的当前消息
     const currentUserMessage = chatList.value[1]?.role === 'user' ? chatList.value[1].content : inputValue;
-    
+
     const messages = buildMessageHistory(chatList.value, currentUserMessage, systemPrompt.value);
 
     // 创建请求控制器和超时保护
@@ -572,7 +602,7 @@ const handleModelRequest = async (inputValue) => {
 
                     // 清除任务ID
                     currentTaskId.value = null;
-                    
+
                     // 清除中断函数
                     fetchCancel.value = null;
                 },
@@ -617,24 +647,12 @@ const handleModelRequest = async (inputValue) => {
                     if (isOk && currentMessageId.value) {
                         try {
                             const messageId = currentMessageId.value;
-                            
-                            // 延时2秒后再获取建议问题列表
-                            setTimeout(async () => {
-                                try {
-                                    const questions = await getSuggestedQuestions(messageId);
-                                    if (questions && questions.length > 0) {
-                                        // 保存建议问题列表
-                                        suggestedQuestions.value = questions;
-                                    } else {
-                                        // 清空建议问题列表
-                                        suggestedQuestions.value = [];
-                                    }
-                                } catch (delayedError) {
-                                    console.error('延时获取建议问题出错:', delayedError);
-                                    suggestedQuestions.value = [];
-                                }
+
+                            // 使用新函数获取建议问题
+                            setTimeout(() => {
+                                fetchSuggestedQuestions(messageId);
                             }, 2000);
-                            
+
                             // 清除消息ID
                             currentMessageId.value = null;
                         } catch (error) {
@@ -732,6 +750,9 @@ const handleNewConversation = () => {
     resetConversation();
     currentConversationId.value = '';
     chatList.value = [];
+    // 清空建议问题列表
+    suggestedQuestions.value = [];
+    suggestedQuestionsConversationId.value = '';
     // 关闭抽屉
     showConversationDrawer.value = false;
 };
@@ -815,11 +836,11 @@ const confirmDelete = async () => {
         showDeleteDialog.value = false;
         return;
     }
-    
+
     try {
         // 调用API删除对话
         const result = await deleteConversation(currentDeletingId.value);
-        
+
         // 从本地列表中移除
         conversationList.value = conversationList.value.filter(c => c.id !== currentDeletingId.value);
 
@@ -828,6 +849,9 @@ const confirmDelete = async () => {
             resetConversation();
             chatList.value = [];
             currentConversationId.value = '';
+            // 清空建议问题列表
+            suggestedQuestions.value = [];
+            suggestedQuestionsConversationId.value = '';
         }
     } catch (error) {
         console.error('删除对话失败:', error);
@@ -851,8 +875,45 @@ const handleSuggestedQuestion = (question) => {
     inputEnter(question);
     // 清空建议问题列表
     suggestedQuestions.value = [];
+    suggestedQuestionsConversationId.value = '';
 };
 
+// 添加新函数：获取建议问题
+const fetchSuggestedQuestions = async (messageId) => {
+    if (!messageId) {
+        console.error('获取建议问题失败: messageId不能为空');
+        suggestedQuestions.value = [];
+        suggestedQuestionsConversationId.value = '';
+        return;
+    }
+
+    try {
+        // 保存当前会话ID，用于后续检查
+        const requestConversationId = currentConversationId.value;
+
+        const questions = await getSuggestedQuestions(messageId);
+
+        // 检查当前会话ID是否与请求时的一致，避免切换对话后显示错误的建议问题
+        if (requestConversationId !== currentConversationId.value) {
+            console.log('会话已切换，不显示之前会话的建议问题');
+            return;
+        }
+
+        if (questions && questions.length > 0) {
+            // 保存建议问题列表和关联的会话ID
+            suggestedQuestions.value = questions;
+            suggestedQuestionsConversationId.value = currentConversationId.value;
+        } else {
+            // 清空建议问题列表
+            suggestedQuestions.value = [];
+            suggestedQuestionsConversationId.value = '';
+        }
+    } catch (error) {
+        console.error('获取建议问题出错:', error);
+        suggestedQuestions.value = [];
+        suggestedQuestionsConversationId.value = '';
+    }
+};
 
 </script>
 
@@ -888,11 +949,17 @@ const handleSuggestedQuestion = (question) => {
             box-shadow: $shadow-2;
         }
     }
-    
+
     /* 确保Markdown标题没有边距 */
     :deep(.t-chat-content),
     :deep(.t-chat__content) {
-        h1, h2, h3, h4, h5, h6 {
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
             margin-top: 0 !important;
             margin-bottom: 8px !important;
             padding: 0 !important;
@@ -921,19 +988,48 @@ const handleSuggestedQuestion = (question) => {
 }
 
 /* 建议问题样式 */
+.suggested-questions-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    /* 提升在iOS上的滚动体验 */
+    margin-bottom: $comp-margin-xs;
+    padding: 0 $comp-margin-s;
+    /* 隐藏滚动条但保留功能 */
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+
+    /* IE and Edge */
+    &::-webkit-scrollbar {
+        display: none;
+        /* Chrome, Safari, Opera */
+    }
+}
+
 .suggested-questions {
     display: flex;
-    flex-wrap: wrap;
-    padding: $comp-margin-xs $comp-margin-s;
+    flex-wrap: nowrap;
+    /* 不换行，允许水平滚动 */
+    padding: $comp-margin-xs 0;
     gap: $comp-margin-xs;
-    justify-content: center;
+    justify-content: flex-start;
+    /* 左对齐 */
+    white-space: nowrap;
+    /* 防止内容换行 */
+    width: max-content;
+    /* 内容宽度决定容器宽度 */
 }
 
 .question-tag {
     cursor: pointer;
-    margin-bottom: $comp-margin-xxs;
+    margin-bottom: 0;
     transition: all 0.2s ease;
-    
+
     &:hover {
         transform: translateY(-2px);
     }
