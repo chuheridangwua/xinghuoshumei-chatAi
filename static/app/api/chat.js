@@ -359,16 +359,30 @@ export const scrollToBottom = (chatRef) => {
 /**
  * 创建用户消息对象
  * @param {string} content - 消息内容
+ * @param {Array} files - 文件数组，可选
  * @returns {Object} 用户消息对象
  */
-export const createUserMessage = (content) => {
-    return {
+export const createUserMessage = (content, files = []) => {
+    const userMessage = {
         avatar: 'https://tdesign.gtimg.com/site/avatar.jpg',
         name: '自己',
         datetime: new Date().toLocaleString(),
         content: content || '',
         role: 'user',
     };
+    
+    // 如果有文件，添加到消息对象
+    if (files && Array.isArray(files) && files.length > 0) {
+        userMessage.files = files.map(file => ({
+            id: file.upload_file_id || file.id,
+            filename: file.filename || file.name || '未命名文件',
+            type: file.type || 'document',
+            size: file.size || 0,
+            url: file.url || ''
+        }));
+    }
+    
+    return userMessage;
 };
 
 /**

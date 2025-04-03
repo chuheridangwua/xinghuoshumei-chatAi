@@ -98,9 +98,14 @@ const handleSend = (value: string) => {
   const files = uploadedFiles.value.map(file => ({
     type: 'document', // 所有支持的类型都是文档类型
     transfer_method: 'local_file',
-    upload_file_id: file.id
+    upload_file_id: file.id,
+    // 使用filename属性以与chat.js一致
+    filename: file.name,
+    name: file.name,
+    extension: file.extension,
+    size: file.size
   }));
-
+  
   emit('send', { message, files });
 
   // 清空已上传文件列表
@@ -161,7 +166,7 @@ const handleFileSelected = async (event: Event) => {
   }
 
   const file = files[0];
-
+  
   // 检查是否已达到最大文件数量
   if (uploadedFiles.value.length >= MAX_FILES) {
     MessagePlugin.warning(`最多只能上传${MAX_FILES}个附件`);
@@ -236,7 +241,7 @@ const handleFileSelected = async (event: Event) => {
     }
 
     const result = await response.json();
-
+    
     // 添加到上传文件列表
     uploadedFiles.value.push({
       id: result.id,

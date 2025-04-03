@@ -504,24 +504,24 @@ const inputEnter = function (inputValue) {
     if (isStreamLoad.value) {
         return;
     }
-    
+
     // 处理消息格式，支持包含文件的复合消息
     let messageText = '';
     let files = [];
-    
+
     if (typeof inputValue === 'string') {
         messageText = inputValue;
     } else if (typeof inputValue === 'object') {
         messageText = inputValue.message || '';
         files = inputValue.files || [];
     }
-    
+
     if (!messageText && files.length === 0) {
         return;
     }
 
     // 添加用户消息
-    const userMessage = createUserMessage(messageText);
+    const userMessage = createUserMessage(messageText, files);
     chatList.value.unshift(userMessage);
 
     // 添加助手消息（空消息占位）
@@ -655,11 +655,11 @@ const handleModelRequest = async (inputValue, files = []) => {
                 // 完成事件
                 onComplete: (success, message) => {
                     console.log('请求完成, 成功:', success, message);
-                    
+
                     // 更新UI状态
                     loading.value = false;
                     isStreamLoad.value = false;
-                    
+
                     if (lastItem) {
                         lastItem.loading = false;
                         lastItem.isStreamLoad = false;
@@ -684,9 +684,9 @@ const handleModelRequest = async (inputValue, files = []) => {
                                         console.log('自动重命名完成，但未返回标题');
                                         return;
                                     }
-                                    
+
                                     console.log('自动重命名完成，新标题:', newTitle);
-                                    
+
                                     // 更新本地会话列表中的名称
                                     conversationList.value = conversationList.value.map(conversation => {
                                         if (conversation.id === currentConversationId.value) {
@@ -932,7 +932,7 @@ const handleSuggestedQuestion = (question) => {
 // 获取AI建议问题
 const fetchSuggestedQuestions = async (messageId) => {
     if (!messageId) return;
-    
+
     try {
         const questions = await getSuggestedQuestions(messageId);
         if (questions && Array.isArray(questions) && questions.length > 0) {
