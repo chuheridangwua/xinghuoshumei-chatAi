@@ -37,62 +37,53 @@ export const getModelInstance = () => {
  * @returns {Promise} 请求Promise
  */
 export const sendChatRequest = async (messages, options = {}) => {
-    console.log('[Request] 准备发送聊天请求');
+    try {
+        const userId = ensureUserId();
 
-    const model = getModelInstance();
-    const userId = ensureUserId();
+        const url = new URL(`${API_CONFIG.baseURL}/chat-messages`);
+        
+        // 获取最后一条用户消息
+        const lastMessage = messages[messages.length - 1];
+        
+        // 构建请求体
+        const requestBody = {
+            query: lastMessage.content, // 用最后一条消息作为query
+            user: userId,
+            response_mode: 'streaming',
+            inputs: {},
+        };
+        
+        // 添加对话ID (如果存在)
+        if (options.conversation_id) {
+            requestBody.conversation_id = options.conversation_id;
+        }
+        
+        // 添加文件列表 (如果存在)
+        if (options.files && Array.isArray(options.files) && options.files.length > 0) {
+            requestBody.files = options.files;
+        }
 
-    // 从messages中提取最后一条用户消息作为query
-    const lastUserMessage = messages.filter(msg => msg.role === 'user').pop();
-    const query = lastUserMessage ? lastUserMessage.content : '';
+        console.log('[Request] 发送请求:', requestBody);
 
-    // 获取conversation_id（如果存在）
-    const conversation_id = options.conversation_id || '';
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${API_CONFIG.apiKey}`
+            },
+            body: JSON.stringify(requestBody),
+            signal: options.signal
+        });
 
-    console.log('[Request] 请求参数', {
-        userId: userId,
-        conversationId: conversation_id || '(新会话)',
-        queryLength: query.length,
-        messageCount: messages.length,
-        hasSignal: !!options.signal
-    });
+        if (!response.ok) {
+            throw new Error(`请求失败: ${response.status}`);
+        }
 
-    // 创建请求对象
-    const requestBody = {
-        inputs: {
-            username: userId // 使用用户ID作为自定义变量username的值
-        },
-        query: query,
-        response_mode: "streaming",
-        user: userId
-    };
-
-    // 只有当conversation_id存在时才添加到请求中
-    if (conversation_id) {
-        requestBody.conversation_id = conversation_id;
+        return response;
+    } catch (error) {
+        console.error('发送聊天请求失败:', error);
+        throw error;
     }
-
-    console.log('[Request] 发送请求到:', `${model.baseURL}/chat-messages`);
-
-    // 创建请求
-    const promise = fetch(`${model.baseURL}/chat-messages`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${model.apiKey}`
-        },
-        body: JSON.stringify(requestBody),
-        signal: options.signal
-    });
-
-    // 如果存在signal，将其附加到promise对象以便后续检查
-    if (options.signal) {
-        promise.signal = options.signal;
-        console.log('[Request] 已附加AbortSignal到请求');
-    }
-
-    console.log('[Request] 聊天请求已发送，等待响应');
-    return promise;
 };
 
 /**
@@ -214,6 +205,21 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
                             }
                         } else if (data.event === 'message_file') {
                             console.log('%c[Stream] 收到文件事件: message_file', 'color: #4CAF50; font-weight: bold;');
+                            
+                            // 处理文件事件数据
+                            if (callbacks.onFileEvent && data.file) {
+                                // 构建文件数据对象
+                                const fileData = {
+                                    id: data.file.id,
+                                    filename: data.file.filename || data.file.name,
+                                    type: data.file.type || 'document',
+                                    size: data.file.size || 0,
+                                    url: data.file.url || ''
+                                };
+                                
+                                // 调用文件事件回调
+                                callbacks.onFileEvent(fileData);
+                            }
                         } else if (data.event === 'message_replace') {
                             console.log('%c[Stream] 收到消息替换事件: message_replace', 'color: #4CAF50; font-weight: bold;');
                             // 替换消息内容为审查后的内容

@@ -16,6 +16,18 @@
             </t-chat-reasoning>
             <!-- 显示消息内容，如果没有则显示占位 -->
             <t-chat-content v-if="content && content.trim().length > 0" :content="content" class="zero-margins" />
+
+
+            <div class="message-files" v-if="files && files.length > 0">
+                <div class="files-scroll-container">
+                    <t-tag v-for="(file, index) in files" :key="index" theme="default" variant="light" shape="round"
+                        size="medium" class="file-tag">
+                        <t-icon :name="getFileIcon(file.type)" class="file-icon" />
+                        <span class="file-name">{{ formatFileName(file.filename) }}</span>
+                    </t-tag>
+                </div>
+            </div>
+
         </template>
 
         <!-- 第一条消息且正在加载时显示加载动画 -->
@@ -27,9 +39,12 @@
             </div>
         </template>
 
+
         <!-- 操作按钮，只对助手消息显示 -->
-        <template v-if="!isStreamLoad && role === 'assistant'" #actions>
-            <chat-action :is-good="isGood" :is-bad="isBad" :content="content || ''" @operation="handleOperation" />
+        <template #actions>
+
+            <chat-action v-if="!isStreamLoad && role === 'assistant'" :is-good="isGood" :is-bad="isBad"
+                :content="content || ''" @operation="handleOperation" />
         </template>
     </t-chat-item>
 </template>
@@ -87,6 +102,10 @@ const props = defineProps({
     isBad: {
         type: Boolean,
         default: false
+    },
+    files: {
+        type: Array,
+        default: () => []
     }
 });
 
@@ -96,6 +115,34 @@ const emit = defineEmits(['reasoning-expand-change', 'operation']);
 // 处理操作事件，确保正确传递参数
 const handleOperation = (type, options) => {
     emit('operation', type, options);
+};
+
+// 文件图标映射
+const fileIconMap = {
+    'document': 'file-excel',
+    'image': 'photo',
+    'audio': 'play-circle',
+    'video': 'play-circle-stroke',
+    'custom': 'file'
+};
+
+// 获取文件图标
+const getFileIcon = (type) => {
+    return fileIconMap[type] || 'file';
+};
+
+// 格式化文件名
+const formatFileName = (fileName) => {
+    if (!fileName) return '';
+    if (fileName.length <= 10) return fileName;
+
+    const lastDotIndex = fileName.lastIndexOf('.');
+    if (lastDotIndex === -1) return fileName.slice(0, 7) + '...';
+
+    const extension = fileName.slice(lastDotIndex);
+    const name = fileName.slice(0, lastDotIndex);
+    if (name.length <= 7) return fileName; // 如果名称部分已经很短，保留全名
+    return name.slice(0, 7) + '...' + extension;
 };
 </script>
 
@@ -121,6 +168,57 @@ const handleOperation = (type, options) => {
     }
 }
 
+/* 消息文件展示样式 */
+.message-files {
+    width: 100%;
+}
+
+.files-scroll-container {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none; /* Firefox */
+    -webkit-overflow-scrolling: touch;
+    padding: 4px 0;
+    white-space: nowrap;
+    -ms-overflow-style: none; /* IE and Edge */
+}
+
+/* 隐藏滚动条但保留功能 */
+.files-scroll-container::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+}
+
+.files-scroll-container::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+.file-tag {
+    display: inline-flex;
+    align-items: center;
+    margin: 0 4px;
+    padding: 2px 6px 2px 10px;
+    background-color: var(--td-bg-color-container, $gray-color-1);
+    border-color: var(--td-component-border, $gray-color-3);
+    flex-shrink: 0;
+
+    .file-icon {
+        color: $success-color-7;
+        font-size: 16px;
+        margin-right: 6px;
+        flex-shrink: 0;
+    }
+
+    .file-name {
+        color: var(--td-text-color-primary, $font-gray-1);
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
 /* 确保Markdown内容中的元素没有边距 */
 :deep(.zero-margins) {
 
@@ -135,5 +233,9 @@ const handleOperation = (type, options) => {
         padding: 0 !important;
         line-height: normal !important;
     }
+}
+
+:deep(.t-chat__text--user) {
+    text-align: right !important;
 }
 </style>

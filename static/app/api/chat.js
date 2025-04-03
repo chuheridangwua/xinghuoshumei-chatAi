@@ -119,7 +119,7 @@ const extractThinkingContent = (content) => {
 };
 
 /**
- * 获取服务器会话历史消息
+ * 获取服务器会话历史
  * @param {String} conversationId - 会话ID
  * @param {Object} options - 分页选项
  * @returns {Promise<Array>} 会话历史消息数组
@@ -159,14 +159,45 @@ export const getServerConversationHistory = async (conversationId, options = {})
             for (const msg of data.data) {
                 // 如果有query字段，创建用户消息
                 if (msg.query) {
-                    formattedMessages.push({
+                    // 创建基本用户消息
+                    const userMessage = {
                         avatar: 'https://tdesign.gtimg.com/site/avatar.jpg', // 用户头像
                         name: '自己',
                         datetime: new Date(msg.created_at * 1000).toLocaleString(),
                         content: msg.query,
                         role: 'user',
                         id: msg.id + '_user'
-                    });
+                    };
+                    
+                    // 如果有files字段，添加到用户消息中
+                    if (msg.files && Array.isArray(msg.files) && msg.files.length > 0) {
+                        userMessage.files = msg.files.map(file => ({
+                            id: file.id,
+                            filename: file.filename || file.name,
+                            type: file.type || 'document',
+                            size: file.size || 0,
+                            url: file.url || ''
+                        }));
+                    }
+                    
+                    // 如果有message_files字段，添加到用户消息中
+                    if (msg.message_files && Array.isArray(msg.message_files) && msg.message_files.length > 0) {
+                        if (!userMessage.files) {
+                            userMessage.files = [];
+                        }
+                        
+                        msg.message_files.forEach(file => {
+                            userMessage.files.push({
+                                id: file.id,
+                                filename: file.filename || file.name,
+                                type: file.type || 'document',
+                                size: file.size || 0,
+                                url: file.url || ''
+                            });
+                        });
+                    }
+                    
+                    formattedMessages.push(userMessage);
                 }
 
                 // 如果有answer字段，创建助手消息
@@ -174,7 +205,8 @@ export const getServerConversationHistory = async (conversationId, options = {})
                     // 提取思考内容
                     const { content, reasoning } = extractThinkingContent(msg.answer);
 
-                    formattedMessages.push({
+                    // 创建基本助手消息
+                    const assistantMessage = {
                         avatar: 'https://tdesign.gtimg.com/site/chat-avatar.png', // 助手头像
                         name: 'TDesignAI',
                         datetime: new Date(msg.created_at * 1000).toLocaleString(),
@@ -182,7 +214,9 @@ export const getServerConversationHistory = async (conversationId, options = {})
                         role: 'assistant',
                         ...(reasoning ? { reasoning } : {}), // 只有有思考内容时才添加
                         id: msg.id + '_assistant'
-                    });
+                    };
+                    
+                    formattedMessages.push(assistantMessage);
                 }
             }
 
@@ -537,22 +571,18 @@ export const saveChatHistory = () => {
 };
 
 /**
- * 获取下一轮建议问题列表
+ * 获取消息建议问题
  * @param {String} messageId - 消息ID
- * @returns {Promise<Array<String>>} 建议问题列表
+ * @returns {Promise<Array>} 建议问题列表
  */
 export const getSuggestedQuestions = async (messageId) => {
-    if (!messageId) {
-        console.error('获取建议问题失败: messageId不能为空');
-        return [];
-    }
-
     try {
         const userId = ensureUserId();
-        
-        const url = new URL(`${API_CONFIG.baseURL}/messages/${messageId}/suggested`);
+
+        const url = new URL(`${API_CONFIG.baseURL}/message-suggestions`);
+        url.searchParams.append('message_id', messageId);
         url.searchParams.append('user', userId);
-        
+
         const response = await fetch(url, {
             method: 'GET',
             headers: {
@@ -562,22 +592,20 @@ export const getSuggestedQuestions = async (messageId) => {
         });
 
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`获取建议问题失败: ${response.status} ${errorText}`);
+            throw new Error(`获取建议问题失败: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // 检查返回数据结构
+        if (data && data.data && Array.isArray(data.data)) {
+            // 返回建议问题列表
+            return data.data;
+        } else {
             return [];
         }
-
-        const result = await response.json();
-
-        console.log("[Chat] 获取建议问题", result.data);
-        
-        if (result && result.result === 'success' && Array.isArray(result.data)) {
-            return result.data;
-        }
-        
-        return [];
     } catch (error) {
-        console.error('获取建议问题出错:', error);
+        console.error('获取建议问题失败:', error);
         return [];
     }
 };

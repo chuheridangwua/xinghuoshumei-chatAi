@@ -15,7 +15,7 @@
                 <chat-item :avatar="item.avatar" :name="item.name" :role="item.role" :datetime="item.datetime"
                     :content="item.content" :reasoning="item.reasoning" :is-first-message="index === 0"
                     :loading="loading" :first-token-received="firstTokenReceived" :is-stream-load="isStreamLoad"
-                    :is-good="isGood" :is-bad="isBad"
+                    :is-good="isGood" :is-bad="isBad" :files="item.files"
                     @reasoning-expand-change="(expandValue) => handleChange(expandValue, { index })"
                     @operation="(type, e) => handleOperation(type, { index, e })" />
             </template>
@@ -52,7 +52,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, nextTick } from 'vue';
 import { chatWithModel, loadSystemPrompt, resetConversation } from '/static/app/api/model.js'
 import ChatAction from './comps/ChatAction.vue';
 import ChatSender from './comps/ChatSender.vue';
@@ -503,12 +503,24 @@ const inputEnter = function (inputValue) {
     if (isStreamLoad.value) {
         return;
     }
-    if (!inputValue) {
+    
+    // 处理消息格式，支持包含文件的复合消息
+    let messageText = '';
+    let files = [];
+    
+    if (typeof inputValue === 'string') {
+        messageText = inputValue;
+    } else if (typeof inputValue === 'object') {
+        messageText = inputValue.message || '';
+        files = inputValue.files || [];
+    }
+    
+    if (!messageText && files.length === 0) {
         return;
     }
 
     // 添加用户消息
-    const userMessage = createUserMessage(inputValue);
+    const userMessage = createUserMessage(messageText);
     chatList.value.unshift(userMessage);
 
     // 添加助手消息（空消息占位）
@@ -517,11 +529,11 @@ const inputEnter = function (inputValue) {
     chatList.value.unshift(assistantMessage);
 
     // 发送请求
-    handleModelRequest(inputValue);
+    handleModelRequest(messageText, files);
 };
 
 // 处理模型请求
-const handleModelRequest = async (inputValue) => {
+const handleModelRequest = async (inputValue, files = []) => {
     loading.value = true;
     isStreamLoad.value = true;
     firstTokenReceived.value = false;
@@ -542,7 +554,8 @@ const handleModelRequest = async (inputValue) => {
         // 准备请求选项，如果有当前会话ID则使用，否则创建新会话
         const requestOptions = {
             signal: signal,
-            conversation_id: currentConversationId.value || ''
+            conversation_id: currentConversationId.value || '',
+            files: files.length > 0 ? files : undefined
         };
 
         await chatWithModel(
@@ -565,18 +578,17 @@ const handleModelRequest = async (inputValue) => {
                         if (!lastItem.reasoning || lastItem.reasoning === '思考中...') {
                             lastItem.reasoning = reasoningText || '';
                         } else {
-                            // 否则追加思考内容, 完全保留原格式
-                            lastItem.reasoning = (lastItem.reasoning || '') + (reasoningText || '');
+                            // 否则，追加思考内容
+                            lastItem.reasoning += reasoningText || '';
                         }
-                        // 滚动到底部
-                        backBottom();
-                    } catch (error) {
-                        console.error('处理思考内容时出错:', error);
+                    } catch (e) {
+                        console.error('处理思考内容出错:', e);
                     }
                 },
-                // 消息内容
-                onMessage: (content) => {
-                    // 检查是否已中断 - 通过检查loading状态替代直接检查signal
+
+                // 回复内容
+                onMessage: (text) => {
+                    // 检查是否已中断
                     if (!loading.value || !isStreamLoad.value) {
                         return;
                     }
@@ -584,123 +596,131 @@ const handleModelRequest = async (inputValue) => {
                     if (!firstTokenReceived.value) {
                         firstTokenReceived.value = true;
                     }
+
                     try {
-                        // 完全保留原格式，不做任何处理
-                        lastItem.content = (lastItem.content || '') + (content || '');
-                        // 滚动到底部
-                        backBottom();
-                    } catch (error) {
-                        console.error('处理消息内容时出错:', error);
-                    }
-                },
-                // 请求出错
-                onError: (error) => {
-                    console.error('请求出错:', error);
+                        // 设置或追加内容
+                        if (!lastItem.content) {
+                            lastItem.content = text || '';
+                        } else {
+                            lastItem.content += text || '';
+                        }
 
-                    // 处理请求错误
-                    const isAborted = handleRequestError(error, lastItem, { loading, isStreamLoad });
-
-                    // 清除任务ID
-                    currentTaskId.value = null;
-
-                    // 清除中断函数
-                    fetchCancel.value = null;
-                },
-                // 会话ID变更处理
-                onConversationIdChange: (newId) => {
-                    if (newId && !currentConversationId.value) {
-                        currentConversationId.value = newId;
-                    }
-                },
-                // 任务ID变更处理
-                onTaskIdChange: (newTaskId) => {
-                    if (newTaskId) {
-                        currentTaskId.value = newTaskId;
-                    }
-                },
-                // 消息ID变更处理
-                onMessageIdChange: (newMessageId) => {
-                    if (newMessageId) {
-                        currentMessageId.value = newMessageId;
-                    }
-                },
-                // 请求完成
-                onComplete: async (isOk, msg) => {
-                    // 处理请求完成
-                    handleRequestComplete(isOk, msg, lastItem,
-                        { loading, isStreamLoad },
-                        { fetchCancel }
-                    );
-
-                    // 清除任务ID
-                    currentTaskId.value = null;
-
-                    // 保存聊天记录（添加防护措施）
-                    if (chatList.value && Array.isArray(chatList.value)) {
-                        // 不再保存到本地
-                        // await saveChatHistory(chatList.value);
-                    } else {
-                        console.error('聊天列表无效');
-                    }
-
-                    // 如果成功且有消息ID，获取建议问题列表
-                    if (isOk && currentMessageId.value) {
-                        try {
-                            const messageId = currentMessageId.value;
-
-                            // 使用新函数获取建议问题
+                        if (text && !isScrolling.value) {
+                            // 添加一些延迟以确保更新后滚动
                             setTimeout(() => {
-                                fetchSuggestedQuestions(messageId);
-                            }, 2000);
+                                if (chatRef.value) {
+                                    scrollChatToBottom(chatRef.value, true);
+                                }
+                            }, 10);
+                        }
+                    } catch (e) {
+                        console.error('处理消息内容出错:', e);
+                    }
+                },
 
-                            // 清除消息ID
-                            currentMessageId.value = null;
-                        } catch (error) {
-                            console.error('设置延时获取建议问题出错:', error);
-                            // 出错时也要清除消息ID
-                            currentMessageId.value = null;
+                // 文件事件处理
+                onFileEvent: (fileData) => {
+                    // 检查是否已中断
+                    if (!loading.value || !isStreamLoad.value) {
+                        return;
+                    }
+
+                    try {
+                        // 确保lastItem.files是一个数组
+                        if (!lastItem.files) {
+                            lastItem.files = [];
+                        }
+
+                        // 添加文件到助手消息的文件列表
+                        lastItem.files.push(fileData);
+                    } catch (e) {
+                        console.error('处理文件事件出错:', e);
+                    }
+                },
+
+                // 错误处理
+                onError: (errorMessage) => {
+                    console.error('API请求出错:', errorMessage);
+                    MessagePlugin.error(errorMessage || '请求出错');
+
+                    // 更新UI状态
+                    loading.value = false;
+                    isStreamLoad.value = false;
+                    lastItem.loading = false;
+                    lastItem.isStreamLoad = false;
+                    lastItem.content = `请求失败: ${errorMessage}`;
+                },
+
+                // 完成事件
+                onComplete: (success, message) => {
+                    console.log('请求完成, 成功:', success, message);
+                    
+                    // 更新UI状态
+                    loading.value = false;
+                    isStreamLoad.value = false;
+                    
+                    if (lastItem) {
+                        lastItem.loading = false;
+                        lastItem.isStreamLoad = false;
+                    }
+
+                    if (!success) {
+                        console.warn('请求未成功完成:', message);
+                        if (lastItem) {
+                            if (!lastItem.content) {
+                                lastItem.content = `请求未完成: ${message || '未知原因'}`;
+                            }
                         }
                     }
 
-                    // 如果是新会话，需要更新当前会话ID并刷新会话列表
-                    if (isOk) {
-                        // 尝试手动触发自动重命名
-                        if (currentConversationId.value) {
-                            try {
-                                await autoRenameConversationIfNeeded(currentConversationId.value);
-                            } catch (error) {
-                                console.error('手动触发自动重命名失败:', error);
-                            }
+                    // 刷新UI
+                    nextTick(() => {
+                        if (chatRef.value) {
+                            scrollChatToBottom(chatRef.value, true);
                         }
+                    });
+                },
 
-                        // 无论是否是新会话，都刷新会话列表
-                        try {
-                            const serverConversations = await getServerConversations({
-                                limit: 20,
-                                sort_by: '-updated_at'
-                            });
-                            if (serverConversations && Array.isArray(serverConversations)) {
-                                conversationList.value = serverConversations;
-                            }
-                        } catch (error) {
-                            console.error('更新会话列表失败:', error);
-                        }
+                // 会话ID变更
+                onConversationIdChange: (id) => {
+                    console.log('会话ID更新:', id);
+                    if (id && id !== currentConversationId.value) {
+                        currentConversationId.value = id;
+                        // 确保会话列表是最新的
+                        loadConversationListDebounce();
                     }
+                },
+
+                // 消息ID变更
+                onMessageIdChange: (id) => {
+                    currentMessageId.value = id;
+                    // 在消息完成后获取建议问题
+                    if (id && lastItem && lastItem.role === 'assistant') {
+                        getSuggestedQuestionsDebounce(id);
+                    }
+                },
+
+                // 任务ID变更
+                onTaskIdChange: (id) => {
+                    currentTaskId.value = id;
                 }
             },
             requestOptions
         );
-    } catch (error) {
-        console.error('处理模型请求时发生错误:', error);
+    } catch (err) {
+        console.error('聊天请求失败:', err);
+        loading.value = false;
+        isStreamLoad.value = false;
 
-        // 处理请求错误
-        handleRequestError(error, lastItem, { loading, isStreamLoad });
+        // 更新最后一条消息为错误信息
+        if (lastItem) {
+            lastItem.loading = false;
+            lastItem.isStreamLoad = false;
+            lastItem.content = `聊天请求失败: ${err.message || '未知错误'}`;
+        }
 
-        // 清除任务ID
-        currentTaskId.value = null;
-
-        // 清空中断函数，防止内存泄漏
-        fetchCancel.value = null;
+        // 显示错误提示
+        MessagePlugin.error('聊天请求失败: ' + (err.message || '未知错误'));
     }
 };
 
