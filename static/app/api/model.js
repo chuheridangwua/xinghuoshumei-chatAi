@@ -12,7 +12,7 @@ export const modelConfig = {
     'dify-api': {
         instance: {
             baseURL: 'http://192.168.79.122:8083/v1',
-            apiKey: 'app-YOAMLoFfLI87wasZke1PN4V5',
+            apiKey: 'app-JUQYZhaSvAhw9YtuhOCo66A6',
             dangerouslyAllowBrowser: true
         },
         description: 'Dify API 模型'
@@ -56,12 +56,10 @@ export const sendChatRequest = async (messages, options = {}) => {
 
     // 创建请求对象
     const requestBody = {
-        inputs: {
-            username: userId // 使用用户ID作为自定义变量username的值
-        },
+        inputs: {},
         query: query,
         response_mode: "streaming",
-        user: userId
+        user: 'ryfdsa'
     };
 
     // 只有当conversation_id存在时才添加到请求中

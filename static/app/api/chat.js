@@ -5,7 +5,7 @@
 // 统一的API配置
 const MODEL_CONFIG = {
     baseURL: 'http://192.168.79.122:8083/v1',
-    apiKey: 'app-YOAMLoFfLI87wasZke1PN4V5'
+    apiKey: 'app-JUQYZhaSvAhw9YtuhOCo66A6'
 };
 
 /**
