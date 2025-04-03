@@ -6,6 +6,11 @@ const routes: Array<RouteRecordRaw> = [
     redirect: '/app/index'
   },
   {
+    path: '/test/index',
+    name: 'TestIndex',
+    component: () => import('../app/test/index.vue')
+  },
+  {
     path: '/app/index',
     name: 'AppIndex',
     component: () => import('../app/index/index.vue')

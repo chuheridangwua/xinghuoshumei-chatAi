@@ -12,7 +12,7 @@ export const modelConfig = {
     'dify-api': {
         instance: {
             baseURL: 'http://192.168.79.122:8083/v1',
-            apiKey: 'app-JUQYZhaSvAhw9YtuhOCo66A6',
+            apiKey: 'app-YOAMLoFfLI87wasZke1PN4V5',
             dangerouslyAllowBrowser: true
         },
         description: 'Dify API 模型'
