@@ -401,11 +401,24 @@ export const createAssistantMessage = (isDeepThinking = false) => {
  * 1. 新对话的前三次对话后
  * 2. 对话消息数量为5、10、15等（每5条消息）时
  * @param {String} conversationId - 会话ID
+ * @param {Object} options - 选项
+ * @param {Array} options.messages - 当前消息列表，可选，如提供则不再从服务器获取
+ * @param {Function} options.onComplete - 完成回调函数
  */
-export const autoRenameConversationIfNeeded = async (conversationId) => {
+export const autoRenameConversationIfNeeded = async (conversationId, options = {}) => {
     try {
-        // 获取当前会话的消息数量
-        const messages = await getServerConversationHistory(conversationId);
+        if (!conversationId) {
+            console.log('会话ID为空，跳过自动重命名');
+            return false;
+        }
+
+        // 获取当前会话的消息
+        let messages = options.messages || [];
+        
+        if (!messages.length) {
+            messages = await getServerConversationHistory(conversationId);
+        }
+        
         const messageCount = messages.length;
 
         // 计算用户和助手消息对的数量（一问一答算一轮对话）
@@ -429,11 +442,173 @@ export const autoRenameConversationIfNeeded = async (conversationId) => {
         );
 
         if (needRename) {
-            // 调用重命名API
-            await renameConversation(conversationId, { auto_generate: true });
+            console.log('[自动重命名] 需要重命名对话:', conversationId, '当前轮数:', conversationTurns);
+            
+            try {
+                // 尝试使用工作流API生成标题
+                // 首先，提取对话内容
+                let conversationContent = '';
+                
+                // 按照时间顺序添加消息内容（从旧到新）
+                // 确保按时间顺序排序
+                const sortedMessages = [...messages].sort((a, b) => {
+                    // 如果有datetime属性（毫秒时间戳），使用它来排序
+                    if (a.datetime && b.datetime) {
+                        return a.datetime - b.datetime;
+                    }
+                    // 如果有created_at属性（ISO日期字符串或秒级时间戳），使用它来排序
+                    if (a.created_at && b.created_at) {
+                        const timeA = typeof a.created_at === 'string' ? new Date(a.created_at).getTime() : a.created_at * 1000;
+                        const timeB = typeof b.created_at === 'string' ? new Date(b.created_at).getTime() : b.created_at * 1000;
+                        return timeA - timeB;
+                    }
+                    return 0; // 无法比较时保持原顺序
+                });
+                
+                // 从所有消息中提取时间顺序下的"对话轮次"
+                const dialogPairs = [];
+                let currentPair = { user: null, assistant: null };
+                
+                for (const msg of sortedMessages) {
+                    if (msg.role === 'user') {
+                        // 如果当前对中已有用户消息，创建新对
+                        if (currentPair.user !== null) {
+                            dialogPairs.push({...currentPair});
+                            currentPair = { user: null, assistant: null };
+                        }
+                        currentPair.user = msg.content;
+                    } else if (msg.role === 'assistant') {
+                        // 如果助手回复先于用户消息，创建新对
+                        if (currentPair.assistant !== null) {
+                            dialogPairs.push({...currentPair});
+                            currentPair = { user: null, assistant: null };
+                        }
+                        currentPair.assistant = msg.content;
+                    }
+                }
+                
+                // 添加最后一对对话（如果有）
+                if (currentPair.user !== null || currentPair.assistant !== null) {
+                    dialogPairs.push(currentPair);
+                }
+                
+                // 取最近的5轮完整对话（或全部，如果不足5轮）
+                const recentPairs = dialogPairs.slice(-5);
+                
+                // 构建完整对话内容
+                for (let i = 0; i < recentPairs.length; i++) {
+                    const pair = recentPairs[i];
+                    conversationContent += `[第${i+1}轮]\n`;
+                    if (pair.user) {
+                        conversationContent += `用户: ${pair.user}\n`;
+                    }
+                    if (pair.assistant) {
+                        conversationContent += `助手: ${pair.assistant}\n`;
+                    }
+                    conversationContent += '\n';
+                }
+                
+                console.log('[自动重命名] 提取的对话内容:', conversationContent.length, '字节');
+                
+                // 如果消息内容为空，则使用默认重命名
+                if (!conversationContent.trim()) {
+                    console.log('[自动重命名] 消息内容为空，使用默认重命名方式');
+                    const renameResult = await renameConversation(conversationId, { auto_generate: true });
+                    if (!renameResult.success) {
+                        console.warn('[自动重命名] 默认重命名失败:', renameResult.message);
+                    }
+                    return renameResult.success;
+                }
+                
+                // 导入工作流API
+                const { generateArticleTitle } = await import('/static/app/api/workflow.js');
+                
+                let titleGenerated = false;
+                let generatedTitle = '';
+                
+                // 调用工作流API生成标题
+                const result = await generateArticleTitle(conversationContent, {
+                    onOutput: async (output) => {
+                        if (output && output.text) {
+                            const title = output.text.trim();
+                            console.log('[自动重命名] 生成的标题:', title);
+                            
+                            if (title) {
+                                titleGenerated = true;
+                                generatedTitle = title;
+                                
+                                // 使用生成的标题重命名会话
+                                const renameResult = await renameConversation(conversationId, { name: title });
+                                
+                                // 处理重命名结果
+                                if (renameResult.success) {
+                                    console.log('[自动重命名] 重命名成功:', title);
+                                    // 调用完成回调
+                                    if (typeof options.onComplete === 'function') {
+                                        options.onComplete(title);
+                                    }
+                                } else {
+                                    console.error('[自动重命名] 重命名失败:', renameResult.message);
+                                    // 尝试使用默认重命名
+                                    console.log('[自动重命名] 尝试使用默认方式重命名');
+                                    const defaultRenameResult = await renameConversation(conversationId, { auto_generate: true });
+                                    if (defaultRenameResult.success && typeof options.onComplete === 'function') {
+                                        options.onComplete(defaultRenameResult.name || '');
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    onError: async (error) => {
+                        console.error('[自动重命名] 生成标题失败:', error);
+                        // 发生错误时使用默认方式重命名
+                        const renameResult = await renameConversation(conversationId, { auto_generate: true });
+                        if (renameResult.success && typeof options.onComplete === 'function') {
+                            options.onComplete(renameResult.name || '');
+                        }
+                    },
+                    onComplete: async (success) => {
+                        // 如果没有生成标题，但工作流执行成功，可能是没有返回标题或其他情况
+                        if (success && !titleGenerated) {
+                            console.warn('[自动重命名] 工作流执行成功但未生成标题，使用默认重命名');
+                            const renameResult = await renameConversation(conversationId, { auto_generate: true });
+                            if (renameResult.success && typeof options.onComplete === 'function') {
+                                options.onComplete(renameResult.name || '');
+                            }
+                        }
+                    }
+                }, {
+                    responseMode: 'streaming', // 改为流式传输模式
+                    userId: 'title-generator'
+                });
+                
+                // 如果标题已生成，则已经处理过了，返回true
+                if (titleGenerated) {
+                    console.log('[自动重命名] 标题已生成并应用:', generatedTitle);
+                    return true;
+                }
+                
+                // 如果工作流执行失败，使用默认重命名
+                if (!result.success) {
+                    console.warn('[自动重命名] 生成标题工作流执行失败，使用默认重命名');
+                    const renameResult = await renameConversation(conversationId, { auto_generate: true });
+                    return renameResult.success;
+                }
+                
+                return true;
+                
+            } catch (workflowError) {
+                console.error('[自动重命名] 使用工作流生成标题失败，回退到默认方式:', workflowError);
+                // 如果工作流API调用失败，使用默认API重命名
+                const renameResult = await renameConversation(conversationId, { auto_generate: true });
+                return renameResult.success;
+            }
         }
+        
+        return false;
     } catch (error) {
-        console.error('自动重命名失败:', error);
+        console.error('[自动重命名] 自动重命名失败:', error);
+        return false;
     }
 };
 
@@ -461,6 +636,12 @@ export const renameConversation = async (conversationId, options = {}) => {
             requestBody.name = options.name;
         }
 
+        console.log(`[重命名] 尝试重命名会话 ${conversationId}`, {
+            auto_generate: options.auto_generate,
+            name: options.name,
+            API地址: `${API_CONFIG.baseURL}/conversations/${conversationId}/name`
+        });
+
         const response = await fetch(`${API_CONFIG.baseURL}/conversations/${conversationId}/name`, {
             method: 'POST',
             headers: {
@@ -470,16 +651,42 @@ export const renameConversation = async (conversationId, options = {}) => {
             body: JSON.stringify(requestBody)
         });
 
+        // 获取响应文本，无论成功还是失败
+        const responseText = await response.text();
+        let responseData;
+        
+        try {
+            // 尝试解析为JSON
+            responseData = JSON.parse(responseText);
+        } catch (e) {
+            // 如果不是JSON，保留原始文本
+            responseData = responseText;
+        }
+        
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`重命名会话失败: ${response.status} ${errorText}`);
+            console.error(`[重命名] 重命名会话失败: ${response.status}`, responseData);
+            // 不抛出异常，而是返回错误对象
+            return { 
+                success: false, 
+                status: response.status,
+                error: responseData,
+                message: `重命名会话失败: ${response.status}`
+            };
         }
 
-        const data = await response.json();
-        return data;
+        console.log(`[重命名] 会话重命名成功: ${conversationId}`, responseData);
+        return { 
+            success: true,
+            ...responseData
+        };
     } catch (error) {
-        console.error('重命名会话错误:', error);
-        throw error;
+        console.error('[重命名] 重命名会话错误:', error);
+        // 不抛出异常，返回错误信息
+        return { 
+            success: false, 
+            error: error,
+            message: error.message || '重命名会话失败'
+        };
     }
 };
 

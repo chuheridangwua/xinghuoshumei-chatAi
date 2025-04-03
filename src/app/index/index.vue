@@ -116,6 +116,7 @@ const chatRef = ref(null); // 聊天容器的引用
 const firstTokenReceived = ref(false); // 是否已收到第一个token
 const chatList = ref([]);
 const systemPrompt = ref('');
+const isScrolling = ref(false); // 是否正在滚动，用于控制自动滚动行为
 
 // 新增变量：会话列表
 const conversationList = ref([]);
@@ -671,6 +672,36 @@ const handleModelRequest = async (inputValue, files = []) => {
                                 lastItem.content = `请求未完成: ${message || '未知原因'}`;
                             }
                         }
+                    } else {
+                        // 请求成功完成，考虑自动重命名对话
+                        // 只有当有会话ID时才尝试重命名
+                        if (currentConversationId.value) {
+                            // 使用改进的自动重命名函数，带上当前消息列表
+                            autoRenameConversationIfNeeded(currentConversationId.value, {
+                                messages: chatList.value,
+                                onComplete: (newTitle) => {
+                                    if (!newTitle) {
+                                        console.log('自动重命名完成，但未返回标题');
+                                        return;
+                                    }
+                                    
+                                    console.log('自动重命名完成，新标题:', newTitle);
+                                    
+                                    // 更新本地会话列表中的名称
+                                    conversationList.value = conversationList.value.map(conversation => {
+                                        if (conversation.id === currentConversationId.value) {
+                                            return {
+                                                ...conversation,
+                                                name: newTitle
+                                            };
+                                        }
+                                        return conversation;
+                                    });
+                                }
+                            }).catch(error => {
+                                console.error('自动重命名过程出错:', error);
+                            });
+                        }
                     }
 
                     // 刷新UI
@@ -898,41 +929,47 @@ const handleSuggestedQuestion = (question) => {
     suggestedQuestionsConversationId.value = '';
 };
 
-// 添加新函数：获取建议问题
+// 获取AI建议问题
 const fetchSuggestedQuestions = async (messageId) => {
-    if (!messageId) {
-        console.error('获取建议问题失败: messageId不能为空');
-        suggestedQuestions.value = [];
-        suggestedQuestionsConversationId.value = '';
-        return;
-    }
-
+    if (!messageId) return;
+    
     try {
-        // 保存当前会话ID，用于后续检查
-        const requestConversationId = currentConversationId.value;
-
         const questions = await getSuggestedQuestions(messageId);
-
-        // 检查当前会话ID是否与请求时的一致，避免切换对话后显示错误的建议问题
-        if (requestConversationId !== currentConversationId.value) {
-            console.log('会话已切换，不显示之前会话的建议问题');
-            return;
-        }
-
-        if (questions && questions.length > 0) {
-            // 保存建议问题列表和关联的会话ID
+        if (questions && Array.isArray(questions) && questions.length > 0) {
             suggestedQuestions.value = questions;
             suggestedQuestionsConversationId.value = currentConversationId.value;
         } else {
-            // 清空建议问题列表
             suggestedQuestions.value = [];
-            suggestedQuestionsConversationId.value = '';
         }
     } catch (error) {
-        console.error('获取建议问题出错:', error);
+        console.error('获取建议问题失败:', error);
         suggestedQuestions.value = [];
-        suggestedQuestionsConversationId.value = '';
     }
+};
+
+// 防抖函数，减少API调用频率
+const getSuggestedQuestionsDebounce = (messageId) => {
+    setTimeout(() => {
+        fetchSuggestedQuestions(messageId);
+    }, 300);
+};
+
+// 用于会话列表加载的防抖函数
+const loadConversationListDebounce = () => {
+    setTimeout(async () => {
+        try {
+            const conversations = await getServerConversations({
+                limit: 20,
+                sort_by: '-updated_at'
+            });
+            if (conversations && Array.isArray(conversations)) {
+                conversationList.value = conversations;
+                hasMoreConversations.value = conversations.length >= 20;
+            }
+        } catch (error) {
+            console.error('刷新会话列表失败:', error);
+        }
+    }, 500);
 };
 
 </script>
@@ -951,7 +988,7 @@ const fetchSuggestedQuestions = async (messageId) => {
 .chat-container {
     height: 100vh;
     width: 100vw;
-    padding: $comp-size-xxl $size-2 $comp-margin-l;
+    padding: $comp-size-xxxl $size-2 $comp-margin-l;
     transition: padding 0.3s ease;
 
     .t-space {

@@ -266,7 +266,7 @@ const handleFileSelected = async (event: Event) => {
 @import '/static/app/styles/variables.scss';
 
 .chat-sender {
-  padding: 0 $comp-margin-xs;
+  padding: $comp-margin-s $comp-margin-xs 0;
   display: flex;
   flex-direction: column;
 }
