@@ -1,7 +1,7 @@
 <template>
   <div class="chat-sender">
     <!-- 上传文件项展示 -->
-    <div class="uploaded-files" v-if="uploadedFiles.length > 0">
+    <!-- <div class="uploaded-files" v-if="uploadedFiles.length > 0">
       <t-space size="small" break-line>
         <t-tag v-for="(file, index) in uploadedFiles" 
                :key="index"
@@ -17,10 +17,10 @@
           </t-button>
         </t-tag>
       </t-space>
-    </div>
+    </div> -->
     
     <div class="input-container">
-      <div class="attach-button-wrapper">
+      <!-- <div class="attach-button-wrapper">
         <input type="file" ref="fileInput" @change="handleFileSelected" class="file-input" accept=".xlsx,.xls" />
         <t-button v-if="!isUploading" theme="default" variant="text" class="attachment-btn" @click="triggerFileInput">
           <template #icon><t-icon name="attach" size="22px" /></template>
@@ -28,7 +28,7 @@
         <div v-else class="loading-container">
           <t-progress theme="circle" size="40" :percentage="uploadProgress" :color="{ from: '#108ee9', to: '#87d068' }" />
         </div>
-      </div>
+      </div> -->
       <t-chat-input v-model="query" :stop-disabled="loading" :textarea-props="{
         placeholder: '请输入消息...',
         class: 'custom-textarea'
@@ -346,7 +346,7 @@ onUnmounted(() => {
 }
 
 /* 增加左侧内边距，为附件按钮腾出空间 */
-.t-textarea__inner {
-  padding-left: 55px !important;
-}
+// .t-textarea__inner {
+//   padding-left: 55px !important;
+// }
 </style>
