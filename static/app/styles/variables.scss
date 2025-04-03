@@ -1,0 +1,290 @@
+/* TDesign 样式变量 - 从TDesign导入的变量 */
+
+// 颜色变量
+// 主题色
+$brand-color-1: var(--td-brand-color-1);
+$brand-color-2: var(--td-brand-color-2);
+$brand-color-3: var(--td-brand-color-3);
+$brand-color-4: var(--td-brand-color-4);
+$brand-color-5: var(--td-brand-color-5);
+$brand-color-6: var(--td-brand-color-6);
+$brand-color-7: var(--td-brand-color-7);
+$brand-color-8: var(--td-brand-color-8);
+$brand-color-9: var(--td-brand-color-9);
+$brand-color-10: var(--td-brand-color-10);
+
+// 警告色
+$warning-color-1: var(--td-warning-color-1);
+$warning-color-2: var(--td-warning-color-2);
+$warning-color-3: var(--td-warning-color-3);
+$warning-color-4: var(--td-warning-color-4);
+$warning-color-5: var(--td-warning-color-5);
+$warning-color-6: var(--td-warning-color-6);
+$warning-color-7: var(--td-warning-color-7);
+$warning-color-8: var(--td-warning-color-8);
+$warning-color-9: var(--td-warning-color-9);
+$warning-color-10: var(--td-warning-color-10);
+
+// 错误色
+$error-color-1: var(--td-error-color-1);
+$error-color-2: var(--td-error-color-2);
+$error-color-3: var(--td-error-color-3);
+$error-color-4: var(--td-error-color-4);
+$error-color-5: var(--td-error-color-5);
+$error-color-6: var(--td-error-color-6);
+$error-color-7: var(--td-error-color-7);
+$error-color-8: var(--td-error-color-8);
+$error-color-9: var(--td-error-color-9);
+$error-color-10: var(--td-error-color-10);
+
+// 成功色
+$success-color-1: var(--td-success-color-1);
+$success-color-2: var(--td-success-color-2);
+$success-color-3: var(--td-success-color-3);
+$success-color-4: var(--td-success-color-4);
+$success-color-5: var(--td-success-color-5);
+$success-color-6: var(--td-success-color-6);
+$success-color-7: var(--td-success-color-7);
+$success-color-8: var(--td-success-color-8);
+$success-color-9: var(--td-success-color-9);
+$success-color-10: var(--td-success-color-10);
+
+// 灰度色
+$gray-color-1: var(--td-gray-color-1);
+$gray-color-2: var(--td-gray-color-2);
+$gray-color-3: var(--td-gray-color-3);
+$gray-color-4: var(--td-gray-color-4);
+$gray-color-5: var(--td-gray-color-5);
+$gray-color-6: var(--td-gray-color-6);
+$gray-color-7: var(--td-gray-color-7);
+$gray-color-8: var(--td-gray-color-8);
+$gray-color-9: var(--td-gray-color-9);
+$gray-color-10: var(--td-gray-color-10);
+$gray-color-11: var(--td-gray-color-11);
+$gray-color-12: var(--td-gray-color-12);
+$gray-color-13: var(--td-gray-color-13);
+$gray-color-14: var(--td-gray-color-14);
+
+// 字体颜色
+$font-white-1: var(--td-font-white-1);
+$font-white-2: var(--td-font-white-2);
+$font-white-3: var(--td-font-white-3);
+$font-white-4: var(--td-font-white-4);
+$font-gray-1: var(--td-font-gray-1);
+$font-gray-2: var(--td-font-gray-2);
+$font-gray-3: var(--td-font-gray-3);
+$font-gray-4: var(--td-font-gray-4);
+
+// 主题功能色
+$brand-color: var(--td-brand-color);
+$warning-color: var(--td-warning-color);
+$error-color: var(--td-error-color);
+$success-color: var(--td-success-color);
+
+$brand-color-hover: var(--td-brand-color-hover);
+$brand-color-focus: var(--td-brand-color-focus);
+$brand-color-active: var(--td-brand-color-active);
+$brand-color-disabled: var(--td-brand-color-disabled);
+$brand-color-light: var(--td-brand-color-light);
+$brand-color-light-hover: var(--td-brand-color-light-hover);
+
+$warning-color-hover: var(--td-warning-color-hover);
+$warning-color-focus: var(--td-warning-color-focus);
+$warning-color-active: var(--td-warning-color-active);
+$warning-color-disabled: var(--td-warning-color-disabled);
+$warning-color-light: var(--td-warning-color-light);
+$warning-color-light-hover: var(--td-warning-color-light-hover);
+
+$error-color-hover: var(--td-error-color-hover);
+$error-color-focus: var(--td-error-color-focus);
+$error-color-active: var(--td-error-color-active);
+$error-color-disabled: var(--td-error-color-disabled);
+$error-color-light: var(--td-error-color-light);
+$error-color-light-hover: var(--td-error-color-light-hover);
+
+$success-color-hover: var(--td-success-color-hover);
+$success-color-focus: var(--td-success-color-focus);
+$success-color-active: var(--td-success-color-active);
+$success-color-disabled: var(--td-success-color-disabled);
+$success-color-light: var(--td-success-color-light);
+$success-color-light-hover: var(--td-success-color-light-hover);
+
+// 背景色
+$bg-color-page: var(--td-bg-color-page);
+$bg-color-container: var(--td-bg-color-container);
+$bg-color-container-hover: var(--td-bg-color-container-hover);
+$bg-color-container-active: var(--td-bg-color-container-active);
+$bg-color-container-select: var(--td-bg-color-container-select);
+$bg-color-secondarycontainer: var(--td-bg-color-secondarycontainer);
+$bg-color-secondarycontainer-hover: var(--td-bg-color-secondarycontainer-hover);
+$bg-color-secondarycontainer-active: var(--td-bg-color-secondarycontainer-active);
+$bg-color-component: var(--td-bg-color-component);
+$bg-color-component-hover: var(--td-bg-color-component-hover);
+$bg-color-component-active: var(--td-bg-color-component-active);
+$bg-color-secondarycomponent: var(--td-bg-color-secondarycomponent);
+$bg-color-secondarycomponent-hover: var(--td-bg-color-secondarycomponent-hover);
+$bg-color-secondarycomponent-active: var(--td-bg-color-secondarycomponent-active);
+$bg-color-component-disabled: var(--td-bg-color-component-disabled);
+$bg-color-specialcomponent: var(--td-bg-color-specialcomponent);
+
+// 文字颜色
+$text-color-primary: var(--td-text-color-primary);
+$text-color-secondary: var(--td-text-color-secondary);
+$text-color-placeholder: var(--td-text-color-placeholder);
+$text-color-disabled: var(--td-text-color-disabled);
+$text-color-anti: var(--td-text-color-anti);
+$text-color-brand: var(--td-text-color-brand);
+$text-color-link: var(--td-text-color-link);
+
+// 边框颜色
+$border-level-1-color: var(--td-border-level-1-color);
+$component-stroke: var(--td-component-stroke);
+$border-level-2-color: var(--td-border-level-2-color);
+$component-border: var(--td-component-border);
+
+// 阴影
+$shadow-1: var(--td-shadow-1);
+$shadow-2: var(--td-shadow-2);
+$shadow-3: var(--td-shadow-3);
+$shadow-inset-top: var(--td-shadow-inset-top);
+$shadow-inset-right: var(--td-shadow-inset-right);
+$shadow-inset-bottom: var(--td-shadow-inset-bottom);
+$shadow-inset-left: var(--td-shadow-inset-left);
+
+// 滚动条
+$scrollbar-color: var(--td-scrollbar-color);
+$scrollbar-hover-color: var(--td-scrollbar-hover-color);
+$scroll-track-color: var(--td-scroll-track-color);
+
+// 圆角
+$radius-small: var(--td-radius-small);
+$radius-default: var(--td-radius-default);
+$radius-medium: var(--td-radius-medium);
+$radius-large: var(--td-radius-large);
+$radius-extraLarge: var(--td-radius-extraLarge);
+$radius-round: var(--td-radius-round);
+$radius-circle: var(--td-radius-circle);
+
+// 字体
+$font-family: var(--td-font-family);
+$font-family-medium: var(--td-font-family-medium);
+
+// 字体大小
+$font-size-link-small: var(--td-font-size-link-small);
+$font-size-link-medium: var(--td-font-size-link-medium);
+$font-size-link-large: var(--td-font-size-link-large);
+$font-size-mark-small: var(--td-font-size-mark-small);
+$font-size-mark-medium: var(--td-font-size-mark-medium);
+$font-size-body-small: var(--td-font-size-body-small);
+$font-size-body-medium: var(--td-font-size-body-medium);
+$font-size-body-large: var(--td-font-size-body-large);
+$font-size-title-small: var(--td-font-size-title-small);
+$font-size-title-medium: var(--td-font-size-title-medium);
+$font-size-title-large: var(--td-font-size-title-large);
+$font-size-headline-small: var(--td-font-size-headline-small);
+$font-size-headline-medium: var(--td-font-size-headline-medium);
+$font-size-headline-large: var(--td-font-size-headline-large);
+$font-size-display-medium: var(--td-font-size-display-medium);
+$font-size-display-large: var(--td-font-size-display-large);
+
+// 行高
+$line-height-link-small: var(--td-line-height-link-small);
+$line-height-link-medium: var(--td-line-height-link-medium);
+$line-height-link-large: var(--td-line-height-link-large);
+$line-height-mark-small: var(--td-line-height-mark-small);
+$line-height-mark-medium: var(--td-line-height-mark-medium);
+$line-height-body-small: var(--td-line-height-body-small);
+$line-height-body-medium: var(--td-line-height-body-medium);
+$line-height-body-large: var(--td-line-height-body-large);
+$line-height-title-small: var(--td-line-height-title-small);
+$line-height-title-medium: var(--td-line-height-title-medium);
+$line-height-title-large: var(--td-line-height-title-large);
+$line-height-headline-small: var(--td-line-height-headline-small);
+$line-height-headline-medium: var(--td-line-height-headline-medium);
+$line-height-headline-large: var(--td-line-height-headline-large);
+$line-height-display-medium: var(--td-line-height-display-medium);
+$line-height-display-large: var(--td-line-height-display-large);
+
+// 尺寸
+$size-1: var(--td-size-1);
+$size-2: var(--td-size-2);
+$size-3: var(--td-size-3);
+$size-4: var(--td-size-4);
+$size-5: var(--td-size-5);
+$size-6: var(--td-size-6);
+$size-7: var(--td-size-7);
+$size-8: var(--td-size-8);
+$size-9: var(--td-size-9);
+$size-10: var(--td-size-10);
+$size-11: var(--td-size-11);
+$size-12: var(--td-size-12);
+$size-13: var(--td-size-13);
+$size-14: var(--td-size-14);
+$size-15: var(--td-size-15);
+$size-16: var(--td-size-16);
+
+// 组件尺寸
+$comp-size-xxxs: var(--td-comp-size-xxxs);
+$comp-size-xxs: var(--td-comp-size-xxs);
+$comp-size-xs: var(--td-comp-size-xs);
+$comp-size-s: var(--td-comp-size-s);
+$comp-size-m: var(--td-comp-size-m);
+$comp-size-l: var(--td-comp-size-l);
+$comp-size-xl: var(--td-comp-size-xl);
+$comp-size-xxl: var(--td-comp-size-xxl);
+$comp-size-xxxl: var(--td-comp-size-xxxl);
+$comp-size-xxxxl: var(--td-comp-size-xxxxl);
+$comp-size-xxxxxl: var(--td-comp-size-xxxxxl);
+
+// 弹出层内边距
+$pop-padding-s: var(--td-pop-padding-s);
+$pop-padding-m: var(--td-pop-padding-m);
+$pop-padding-l: var(--td-pop-padding-l);
+$pop-padding-xl: var(--td-pop-padding-xl);
+$pop-padding-xxl: var(--td-pop-padding-xxl);
+
+// 组件水平内边距
+$comp-paddingLR-xxs: var(--td-comp-paddingLR-xxs);
+$comp-paddingLR-xs: var(--td-comp-paddingLR-xs);
+$comp-paddingLR-s: var(--td-comp-paddingLR-s);
+$comp-paddingLR-m: var(--td-comp-paddingLR-m);
+$comp-paddingLR-l: var(--td-comp-paddingLR-l);
+$comp-paddingLR-xl: var(--td-comp-paddingLR-xl);
+$comp-paddingLR-xxl: var(--td-comp-paddingLR-xxl);
+
+// 组件垂直内边距
+$comp-paddingTB-xxs: var(--td-comp-paddingTB-xxs);
+$comp-paddingTB-xs: var(--td-comp-paddingTB-xs);
+$comp-paddingTB-s: var(--td-comp-paddingTB-s);
+$comp-paddingTB-m: var(--td-comp-paddingTB-m);
+$comp-paddingTB-l: var(--td-comp-paddingTB-l);
+$comp-paddingTB-xl: var(--td-comp-paddingTB-xl);
+$comp-paddingTB-xxl: var(--td-comp-paddingTB-xxl);
+
+// 组件外边距
+$comp-margin-xxs: var(--td-comp-margin-xxs);
+$comp-margin-xs: var(--td-comp-margin-xs);
+$comp-margin-s: var(--td-comp-margin-s);
+$comp-margin-m: var(--td-comp-margin-m);
+$comp-margin-l: var(--td-comp-margin-l);
+$comp-margin-xl: var(--td-comp-margin-xl);
+$comp-margin-xxl: var(--td-comp-margin-xxl);
+$comp-margin-xxxl: var(--td-comp-margin-xxxl);
+$comp-margin-xxxxl: var(--td-comp-margin-xxxxl);
+
+// 屏幕断点
+$screen-xs: var(--td-screen-xs);
+$screen-sm: var(--td-screen-sm);
+$screen-md: var(--td-screen-md);
+$screen-lg: var(--td-screen-lg);
+$screen-xl: var(--td-screen-xl);
+$screen-xxl: var(--td-screen-xxl);
+
+// 应用特定变量
+$app-spacing-base: $size-4;
+$app-border-radius: $radius-medium;
+$app-transition-duration: 0.3s;
+$app-transition-timing: ease;
+$app-shadow-light: $shadow-1;
+$app-shadow-medium: $shadow-2;
+$app-shadow-heavy: $shadow-3; 
