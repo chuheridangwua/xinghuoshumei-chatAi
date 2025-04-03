@@ -12,7 +12,7 @@
             <span class="conversation-text">{{ getConversationTitle(conversation) }}</span>
             
             <!-- 更多操作按钮及下拉菜单 -->
-            <t-dropdown @click="handleMenuClick($event, conversation.id)">
+            <t-dropdown @click="handleMenuClick($event, conversation.id)" trigger="click" :hide-after-click="false">
                 <t-button 
                     variant="text" 
                     shape="circle" 
@@ -72,7 +72,11 @@ const emit = defineEmits(['select', 'pin-conversation', 'rename-conversation', '
 
 // 处理菜单点击
 const handleMenuClick = (data, conversationId) => {
-    const value = data.value;
+    // TDesign的dropdown @click事件返回的不是原生事件对象
+    // 所以不要尝试使用stopPropagation
+    const value = data?.value;
+    
+    if (!value) return;
 
     // 处理置顶对话
     if (value.startsWith('pin-')) {
