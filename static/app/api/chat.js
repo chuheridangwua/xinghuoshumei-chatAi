@@ -3,7 +3,7 @@
  */
 
 // 导入API配置
-import { API_CONFIG } from './config.js';
+import { API_CONFIG, createApiUrl } from './config.js';
 
 /**
  * 确保用户ID存在
@@ -31,8 +31,8 @@ export const getServerConversations = async (options = {}) => {
     try {
         const userId = ensureUserId();
 
-        // 构建URL参数
-        const url = new URL(`${API_CONFIG.baseURL}/conversations`);
+        // 使用工具函数创建URL
+        const url = createApiUrl('/conversations');
 
         // 添加用户ID，必选参数
         url.searchParams.append('user', userId);
@@ -130,7 +130,8 @@ export const getServerConversationHistory = async (conversationId, options = {})
 
         const { page = 1, pageSize = 20 } = options;
 
-        const url = new URL(`${API_CONFIG.baseURL}/messages`);
+        // 使用工具函数创建URL
+        const url = createApiUrl('/messages');
         url.searchParams.append('conversation_id', conversationId);
         url.searchParams.append('user', userId);
         url.searchParams.append('page', page);
@@ -800,8 +801,8 @@ export const getSuggestedQuestions = async (messageId) => {
     try {
         const userId = ensureUserId();
 
-        const url = new URL(`${API_CONFIG.baseURL}/message-suggestions`);
-        url.searchParams.append('message_id', messageId);
+        // 使用正确的API端点
+        const url = createApiUrl(`/messages/${messageId}/suggested`);
         url.searchParams.append('user', userId);
 
         const response = await fetch(url, {

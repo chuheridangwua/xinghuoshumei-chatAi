@@ -7,9 +7,20 @@
  * API基础配置
  */
 export const API_CONFIG = {
-    baseURL: 'http://192.168.79.122:8083/v1', // Dify API 基础URL
+    baseURL: '/api/v1', // 使用相对路径，通过Vite代理转发
     apiKey: 'app-JUQYZhaSvAhw9YtuhOCo66A6',  // Dify API 密钥
     workflowApiKey: 'app-6aRhLAp4zAppCJus5ViMgOsh'  // 工作流API密钥（用于标题生成）
+};
+
+/**
+ * 创建API URL
+ * @param {String} path - API路径
+ * @returns {URL} 创建的URL对象
+ */
+export const createApiUrl = (path) => {
+    const urlString = `${API_CONFIG.baseURL}${path}`;
+    const isAbsoluteUrl = urlString.startsWith('http://') || urlString.startsWith('https://');
+    return isAbsoluteUrl ? new URL(urlString) : new URL(urlString, window.location.origin);
 };
 
 /**

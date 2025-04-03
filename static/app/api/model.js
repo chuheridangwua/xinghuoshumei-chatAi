@@ -6,7 +6,7 @@ import {
 } from './chat.js';
 
 // 导入API配置
-import { API_CONFIG } from './config.js';
+import { API_CONFIG, createApiUrl } from './config.js';
 
 /**
  * 模型配置
@@ -40,7 +40,8 @@ export const sendChatRequest = async (messages, options = {}) => {
     try {
         const userId = ensureUserId();
 
-        const url = new URL(`${API_CONFIG.baseURL}/chat-messages`);
+        // 使用工具函数创建URL
+        const url = createApiUrl('/chat-messages');
         
         // 获取最后一条用户消息
         const lastMessage = messages[messages.length - 1];

@@ -3,7 +3,7 @@
  */
 
 // 导入API配置
-import { API_CONFIG } from './config.js';
+import { API_CONFIG, createApiUrl } from './config.js';
 
 /**
  * 执行工作流
@@ -17,7 +17,8 @@ export const runWorkflow = async (inputs = {}, responseMode = 'streaming', optio
         const userId = options.userId || 'default-user';
         const workflowId = options.workflowId || '';
 
-        const url = new URL(`${API_CONFIG.baseURL}/workflows/run`);
+        // 使用工具函数创建URL
+        const url = createApiUrl('/workflows/run');
 
         // 构建请求体
         const requestBody = {
@@ -305,7 +306,8 @@ export const stopWorkflowExecution = async (taskId, userId = 'default-user') => 
             throw new Error('任务ID不能为空');
         }
 
-        const url = new URL(`${API_CONFIG.baseURL}/workflows/tasks/${taskId}/stop`);
+        // 使用工具函数创建URL
+        const url = createApiUrl(`/workflows/tasks/${taskId}/stop`);
 
         const response = await fetch(url, {
             method: 'POST',
@@ -353,7 +355,8 @@ export const generateArticleTitle = async (content, callbacks = {}, options = {}
             userId
         });
 
-        const url = new URL(`${API_CONFIG.baseURL}/workflows/run`);
+        // 使用工具函数创建URL
+        const url = createApiUrl('/workflows/run');
 
         // 构建请求体
         const requestBody = {
