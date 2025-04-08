@@ -16,6 +16,7 @@
                     :content="item.content" :reasoning="item.reasoning" :is-first-message="index === 0"
                     :loading="loading" :first-token-received="firstTokenReceived" :is-stream-load="isStreamLoad"
                     :is-good="isGood" :is-bad="isBad" :files="item.files"
+                    :workflow-steps="item.workflowSteps"
                     @reasoning-expand-change="(expandValue) => handleChange(expandValue, { index })"
                     @operation="(type, e) => handleOperation(type, { index, e })" />
             </template>
@@ -734,6 +735,21 @@ const handleModelRequest = async (inputValue, files = []) => {
                 // 任务ID变更
                 onTaskIdChange: (id) => {
                     currentTaskId.value = id;
+                },
+
+                // 添加：处理工作流步骤的回调
+                onWorkflowSteps: (steps) => {
+                    firstTokenReceived.value = true;
+                    if (chatList.value.length > 0) {
+                        const currentAssistantMessage = chatList.value[0];
+                        // 确保第一条消息是正在生成的助手消息
+                        if (currentAssistantMessage.role === 'assistant' && loading.value) {
+                            // 更新第一条消息的 workflowSteps
+                            currentAssistantMessage.workflowSteps = steps;
+                            // 输出更详细的日志信息
+                            console.log('收到工作流步骤:', steps.map(step => `${step.title}(${step.node_type})${step.loading ? '[加载中]' : ''}`));
+                        }
+                    }
                 }
             },
             requestOptions

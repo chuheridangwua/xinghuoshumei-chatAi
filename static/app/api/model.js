@@ -93,7 +93,7 @@ export const sendChatRequest = async (messages, options = {}) => {
  * @param {Object} callbacks - 回调函数对象
  */
 export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
-    const { onMessage, onError, onComplete, onReasoning } = callbacks;
+    const { onMessage, onError, onComplete, onReasoning, onWorkflowSteps, onConversationIdChange, onMessageIdChange, onTaskIdChange, onFileEvent } = callbacks;
 
     try {
         // 检查responsePromise是否已经被中断
@@ -118,6 +118,8 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
         let buffer = '';
         let isInThinkingMode = false; // 追踪是否在思考模式中
         let conversation_id = null; // 存储会话ID
+        let workflowSteps = []; // 初始化工作流步骤数组
+        let currentLoadingNodeId = null; // 追踪当前正在加载的节点ID
 
         // 添加错误捕获包装
         try {
@@ -159,8 +161,8 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
                             conversation_id = data.conversation_id;
                             console.log(`%c[Stream] 获取会话ID: ${conversation_id}`, 'color: #9C27B0; font-weight: bold;');
                             // 使用回调通知上层组件
-                            if (callbacks.onConversationIdChange) {
-                                callbacks.onConversationIdChange(conversation_id);
+                            if (onConversationIdChange) {
+                                onConversationIdChange(conversation_id);
                             }
                         }
 
@@ -195,20 +197,20 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
                             console.log('%c[Stream] 收到消息结束事件: message_end', 'color: #4CAF50; font-weight: bold;');
 
                             // 消息结束时，只保存消息ID，不直接获取建议问题
-                            if (data.message_id && callbacks.onMessageIdChange) {
+                            if (data.message_id && onMessageIdChange) {
                                 // 通知消息ID变更
-                                callbacks.onMessageIdChange(data.message_id);
+                                onMessageIdChange(data.message_id);
                             }
 
                             // 保存任务ID
-                            if (data.task_id && callbacks.onTaskIdChange) {
-                                callbacks.onTaskIdChange(data.task_id);
+                            if (data.task_id && onTaskIdChange) {
+                                onTaskIdChange(data.task_id);
                             }
                         } else if (data.event === 'message_file') {
                             console.log('%c[Stream] 收到文件事件: message_file', 'color: #4CAF50; font-weight: bold;');
                             
                             // 处理文件事件数据
-                            if (callbacks.onFileEvent && data.file) {
+                            if (onFileEvent && data.file) {
                                 // 构建文件数据对象
                                 const fileData = {
                                     id: data.file.id,
@@ -219,7 +221,7 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
                                 };
                                 
                                 // 调用文件事件回调
-                                callbacks.onFileEvent(fileData);
+                                onFileEvent(fileData);
                             }
                         } else if (data.event === 'message_replace') {
                             console.log('%c[Stream] 收到消息替换事件: message_replace', 'color: #4CAF50; font-weight: bold;');
@@ -233,13 +235,94 @@ export const handleStreamResponse = async (responsePromise, callbacks = {}) => {
                             console.log('%c[Stream] 收到工作流开始事件: workflow_started', 'color: #4CAF50; font-weight: bold;');
                         } else if (data.event === 'node_started') {
                             console.log('%c[Stream] 收到节点开始事件: node_started', 'color: #4CAF50; font-weight: bold;');
-                            console.log('%c[Stream Node Started]', 'color: #2196F3; font-weight: bold;', {
-                                title: data.data?.title
-                            });
+                            const nodeTitle = data.data?.title;
+                            const nodeId = data.data?.id || `node-${workflowSteps.length}`; // 获取或生成节点ID
+                            
+                            if (nodeTitle) {
+                                // 添加：根据节点标题推断节点类型
+                                const inferNodeType = (title) => {
+                                    const titleLower = title.toLowerCase();
+                                    
+                                    if (titleLower === '开始') return 'start';
+                                    if (titleLower.includes('http') || titleLower.includes('请求')) return 'http';
+                                    if (titleLower.includes('条件') || titleLower.includes('分支')) return 'condition';
+                                    if (titleLower.includes('时间')) return 'time';
+                                    if (titleLower.includes('搜索')) return 'search';
+                                    if (titleLower.includes('提取') || titleLower.includes('参数')) return 'extract';
+                                    if (titleLower.includes('web') || titleLower.includes('bocha')) return 'web';
+                                    if (titleLower.includes('文件')) return 'file';
+                                    if (titleLower.includes('模型') || titleLower.includes('总结')) return 'model';
+                                    if (titleLower.includes('回复')) return 'reply';
+                                    if (titleLower.includes('错误')) return 'error';
+                                    
+                                    return 'default';
+                                };
+                                
+                                // 优先使用API返回的类型，如果没有则根据标题推断
+                                const nodeType = data.data?.type || inferNodeType(nodeTitle);
+                                
+                                console.log('%c[Stream Node Started]', 'color: #2196F3; font-weight: bold;', { 
+                                    title: nodeTitle,
+                                    type: nodeType,
+                                    id: nodeId
+                                });
+                                
+                                // 如果存在上一个加载中的节点，将其标记为已完成
+                                if (currentLoadingNodeId) {
+                                    const prevNodeIndex = workflowSteps.findIndex(step => step.id === currentLoadingNodeId);
+                                    if (prevNodeIndex !== -1) {
+                                        workflowSteps[prevNodeIndex].loading = false;
+                                        
+                                        // 发送更新后的工作流步骤
+                                        if (onWorkflowSteps) {
+                                            onWorkflowSteps([...workflowSteps]);
+                                        }
+                                    }
+                                }
+                                
+                                // 使用对象格式添加新节点，并标记为加载中
+                                const nodeObj = {
+                                    title: nodeTitle,
+                                    node_type: nodeType,
+                                    id: nodeId,
+                                    loading: true // 新节点初始状态为加载中
+                                };
+                                
+                                workflowSteps.push(nodeObj);
+                                currentLoadingNodeId = nodeId; // 更新当前加载节点ID
+                                
+                                if (onWorkflowSteps) {
+                                    onWorkflowSteps([...workflowSteps]);
+                                }
+                            }
                         } else if (data.event === 'node_finished') {
                             console.log('%c[Stream] 收到节点完成事件: node_finished', 'color: #4CAF50; font-weight: bold;');
+                            
+                            // 如果有当前加载中的节点，将其标记为已完成
+                            if (currentLoadingNodeId) {
+                                const nodeIndex = workflowSteps.findIndex(step => step.id === currentLoadingNodeId);
+                                if (nodeIndex !== -1) {
+                                    workflowSteps[nodeIndex].loading = false;
+                                    
+                                    // 发送更新后的工作流步骤
+                                    if (onWorkflowSteps) {
+                                        onWorkflowSteps([...workflowSteps]);
+                                    }
+                                }
+                                currentLoadingNodeId = null; // 清空当前加载节点ID
+                            }
                         } else if (data.event === 'workflow_finished') {
                             console.log('%c[Stream] 收到工作流完成事件: workflow_finished', 'color: #4CAF50; font-weight: bold;');
+                            // 确保所有节点都标记为已完成
+                            workflowSteps = workflowSteps.map(step => ({...step, loading: false}));
+                            
+                            // 发送最终的工作流步骤（全部已完成）
+                            if (onWorkflowSteps) {
+                                onWorkflowSteps([...workflowSteps]);
+                            }
+                            
+                            workflowSteps = []; // 清空工作流步骤数组
+                            currentLoadingNodeId = null; // 清空当前加载节点ID
                         } else if (data.event === 'error') {
                             console.error('%c[Stream] 收到错误事件: error', 'color: #F44336; font-weight: bold;');
                             onError?.(data.message || '流处理错误');
