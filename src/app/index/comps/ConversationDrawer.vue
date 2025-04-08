@@ -10,6 +10,12 @@
                     <t-icon name="add" class="conversation-icon" />
                     <span class="conversation-text">新对话</span>
                 </t-list-item>
+                
+                <!-- 添加知识库管理入口 -->
+                <t-list-item @click="goToDatasetManagement" class="conversation-item feature-item">
+                    <t-icon name="folder" class="conversation-icon" />
+                    <span class="conversation-text">知识库管理</span>
+                </t-list-item>
             </div>
 
             <!-- 可滚动的会话列表 -->
@@ -82,8 +88,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import ConversationGroup from './ConversationGroup.vue';
 import { getThemeMode, toggleThemeMode, ThemeMode } from '/static/app/api/theme.js';
+
+// 获取路由器实例
+const router = useRouter();
 
 // 组件属性
 const props = defineProps({
@@ -123,6 +133,13 @@ const toggleTheme = () => {
     currentTheme.value = getThemeMode();
 };
 
+// 前往知识库管理页面
+const goToDatasetManagement = () => {
+    router.push('/app/dataset');
+    // 关闭抽屉
+    emit('update:visible', false);
+};
+
 // 在组件挂载时获取当前主题
 onMounted(() => {
     currentTheme.value = getThemeMode();
@@ -149,6 +166,12 @@ const emit = defineEmits(['update:visible', 'select', 'new-conversation', 'load-
     background-color: $bg-color-container;
     padding-bottom: $comp-paddingTB-xs;
     border-bottom: 1px solid $component-stroke;
+}
+
+.feature-item {
+    border-top: 1px dashed $component-stroke;
+    margin-top: 8px;
+    padding-top: 8px;
 }
 
 .conversations-list {

@@ -9,16 +9,19 @@
 export const API_CONFIG = {
     baseURL: '/api/v1', // 使用相对路径，通过Vite代理转发
     apiKey: 'app-JUQYZhaSvAhw9YtuhOCo66A6',  // Dify API 密钥
-    workflowApiKey: 'app-6aRhLAp4zAppCJus5ViMgOsh'  // 工作流API密钥（用于标题生成）
+    workflowApiKey: 'app-6aRhLAp4zAppCJus5ViMgOsh',  // 工作流API密钥（用于标题生成）
+    datasetApiKey: 'dataset-NU4Kg7Wtm1616AOnxnRAeFct'  // 知识库API密钥
 };
 
 /**
  * 创建API URL
  * @param {String} path - API路径
+ * @param {String} customBaseUrl - 可选的自定义基础URL，默认使用API_CONFIG.baseURL
  * @returns {URL} 创建的URL对象
  */
-export const createApiUrl = (path) => {
-    const urlString = `${API_CONFIG.baseURL}${path}`;
+export const createApiUrl = (path, customBaseUrl) => {
+    const baseUrl = customBaseUrl || API_CONFIG.baseURL;
+    const urlString = `${baseUrl}${path}`;
     const isAbsoluteUrl = urlString.startsWith('http://') || urlString.startsWith('https://');
     return isAbsoluteUrl ? new URL(urlString) : new URL(urlString, window.location.origin);
 };
@@ -46,6 +49,14 @@ export const updateAPIConfig = (newConfig) => {
     
     if (newConfig.workflowApiKey) {
         API_CONFIG.workflowApiKey = newConfig.workflowApiKey;
+    }
+
+    if (newConfig.datasetBaseURL) {
+        API_CONFIG.datasetBaseURL = newConfig.datasetBaseURL;
+    }
+    
+    if (newConfig.datasetApiKey) {
+        API_CONFIG.datasetApiKey = newConfig.datasetApiKey;
     }
 
     console.log('API配置已更新:', API_CONFIG);
