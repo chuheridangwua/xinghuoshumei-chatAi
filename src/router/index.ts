@@ -31,11 +31,11 @@ const routes: Array<RouteRecordRaw> = [
     name: 'DatasetDetail',
     component: () => import('../app/dataset/detail.vue')
   },
-  {
-    path: '/app/dataset/create',
-    name: 'DatasetCreate',
-    component: () => import('../app/dataset/create.vue')
-  },
+  // {
+  //   path: '/app/dataset/create',
+  //   name: 'DatasetCreate',
+  //   component: () => import('../app/dataset/create.vue')
+  // },
   {
     path: '/app/dataset/upload/:id',
     name: 'DatasetUpload', 
