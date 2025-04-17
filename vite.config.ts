@@ -14,7 +14,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://192.168.79.122:8083',
+        target: 'https://api.dify.ai',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '')
       }

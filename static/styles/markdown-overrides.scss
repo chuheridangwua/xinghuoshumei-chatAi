@@ -1,0 +1,59 @@
+/* Markdown样式覆盖文件 */
+
+/* 重置聊天内容中的所有元素边距 */
+.t-chat-item,
+#app,
+body {
+  .t-chat-content,
+  .t-chat__content,
+  [class*="t-chat"] {
+    /* 更强力的标题样式覆盖 */
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 0 !important;
+      margin-bottom: 8px !important;
+      padding: 0 !important;
+      line-height: 1.2 !important;
+    }
+    
+    /* Markdown段落样式 */
+    p {
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+    }
+    
+    /* 列表样式 */
+    ul, ol {
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+      padding-left: 20px !important;
+    }
+    
+    li {
+      margin: 0 !important;
+    }
+    
+    /* 引用块样式 */
+    blockquote {
+      margin: 0 !important;
+      padding-left: 10px !important;
+    }
+    
+    /* 代码块样式 */
+    pre, code {
+      margin: 0 !important;
+    }
+    
+    /* 表格样式 */
+    table {
+      margin: 0 !important;
+    }
+  }
+}
+
+/* 全局样式覆盖，以防其他选择器不生效 */
+body h1, body h2, body h3, body h4, body h5, body h6 {
+  margin-top: 0 !important;
+  margin-bottom: 8px !important;
+  padding: 0 !important;
+  line-height: 1.2 !important;
+} 

@@ -13,7 +13,6 @@
         </t-tag>
       </div>
     </div>
-
     <div class="input-container">
       <div class="attach-button-wrapper">
         <input type="file" ref="fileInput" @change="handleFileSelected" class="file-input"
@@ -38,7 +37,7 @@
 <script setup lang="ts">
 import { ref, onUnmounted } from 'vue';
 import { MessagePlugin, DialogPlugin, Progress as TProgress, Tag as TTag, Space as TSpace, Button as TButton } from 'tdesign-vue-next';
-import { API_CONFIG } from '/static/app/api/config.js';
+import { API_CONFIG } from '/static/api/config.js';
 
 const props = defineProps({
   loading: {
@@ -215,7 +214,12 @@ const handleFileSelected = async (event: Event) => {
     // 准备FormData
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('user', localStorage.getItem('dify_user_id') || 'anonymous');
+    
+    // 获取URL中的userId参数
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlUserId = urlParams.get('userId');
+    // 优先使用URL中的userId，如果没有则使用localStorage中的，如果都没有则使用'anonymous'
+    formData.append('user', urlUserId || localStorage.getItem('dify_user_id') || 'anonymous');
 
     // 模拟进度
     const progressInterval = setInterval(() => {
@@ -268,7 +272,7 @@ const handleFileSelected = async (event: Event) => {
 </script>
 
 <style lang="scss">
-@import '/static/app/styles/variables.scss';
+@import '/static/styles/variables.scss';
 
 .chat-sender {
   padding: $comp-margin-s $comp-margin-xs 0;

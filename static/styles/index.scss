@@ -1,0 +1,287 @@
+/* 主样式索引文件 */
+
+// 导入变量
+@use './variables.scss';
+
+// 导入其他样式文件
+@use './overrides.scss';
+@use './dark-theme.scss';
+@use './markdown-overrides.scss';  // 导入Markdown样式覆盖
+
+// 全局样式
+:root {
+  // 使用全局过渡效果
+  --app-transition: all #{variables.$app-transition-duration} #{variables.$app-transition-timing};
+}
+
+// 全局过渡效果
+body, html {
+  transition: var(--app-transition);
+}
+
+// 自定义滚动条
+// .custom-scrollbar {
+//   &::-webkit-scrollbar {
+//     width: 6px;
+//     height: 6px;
+//   }
+
+//   &::-webkit-scrollbar-track {
+//     background: variables.$scroll-track-color;
+//   }
+
+//   &::-webkit-scrollbar-thumb {
+//     background: variables.$scrollbar-color;
+//     border-radius: variables.$radius-small;
+//   }
+
+//   &::-webkit-scrollbar-thumb:hover {
+//     background: variables.$scrollbar-hover-color;
+//   }
+// }
+
+// 自定义卡片
+.app-card {
+  background-color: variables.$bg-color-container;
+  border-radius: variables.$app-border-radius;
+  padding: variables.$comp-paddingTB-m variables.$comp-paddingLR-m;
+  box-shadow: variables.$app-shadow-light;
+  transition: var(--app-transition);
+  
+  &:hover {
+    box-shadow: variables.$app-shadow-medium;
+  }
+}
+
+// 自定义按钮
+.app-button {
+  background-color: variables.$bg-color-component;
+  color: variables.$text-color-primary;
+  border: 1px solid variables.$component-border;
+  border-radius: variables.$radius-default;
+  padding: variables.$comp-paddingTB-xs variables.$comp-paddingLR-s;
+  transition: var(--app-transition);
+  
+  &:hover {
+    background-color: variables.$bg-color-component-hover;
+  }
+  
+  &:active {
+    background-color: variables.$bg-color-component-active;
+  }
+  
+  &--primary {
+    background-color: variables.$brand-color;
+    color: variables.$text-color-anti;
+    border: none;
+    
+    &:hover {
+      background-color: variables.$brand-color-hover;
+    }
+    
+    &:active {
+      background-color: variables.$brand-color-active;
+    }
+  }
+  
+  &--success {
+    background-color: variables.$success-color;
+    color: variables.$text-color-anti;
+    border: none;
+    
+    &:hover {
+      background-color: variables.$success-color-hover;
+    }
+    
+    &:active {
+      background-color: variables.$success-color-active;
+    }
+  }
+  
+  &--warning {
+    background-color: variables.$warning-color;
+    color: variables.$text-color-anti;
+    border: none;
+    
+    &:hover {
+      background-color: variables.$warning-color-hover;
+    }
+    
+    &:active {
+      background-color: variables.$warning-color-active;
+    }
+  }
+  
+  &--danger {
+    background-color: variables.$error-color;
+    color: variables.$text-color-anti;
+    border: none;
+    
+    &:hover {
+      background-color: variables.$error-color-hover;
+    }
+    
+    &:active {
+      background-color: variables.$error-color-active;
+    }
+  }
+}
+
+// 自定义输入框
+.app-input {
+  background-color: variables.$bg-color-container;
+  border: 1px solid variables.$component-border;
+  border-radius: variables.$radius-default;
+  padding: variables.$comp-paddingTB-xs variables.$comp-paddingLR-s;
+  transition: var(--app-transition);
+  
+  &:focus {
+    border-color: variables.$brand-color;
+    box-shadow: 0 0 0 2px variables.$brand-color-focus;
+  }
+  
+  &:hover:not(:focus) {
+    border-color: variables.$brand-color-hover;
+  }
+}
+
+// 常用边距工具类
+.m {
+  &-xxs { margin: variables.$comp-margin-xxs; }
+  &-xs { margin: variables.$comp-margin-xs; }
+  &-s { margin: variables.$comp-margin-s; }
+  &-m { margin: variables.$comp-margin-m; }
+  &-l { margin: variables.$comp-margin-l; }
+  &-xl { margin: variables.$comp-margin-xl; }
+  &-xxl { margin: variables.$comp-margin-xxl; }
+}
+
+.mt {
+  &-xxs { margin-top: variables.$comp-margin-xxs; }
+  &-xs { margin-top: variables.$comp-margin-xs; }
+  &-s { margin-top: variables.$comp-margin-s; }
+  &-m { margin-top: variables.$comp-margin-m; }
+  &-l { margin-top: variables.$comp-margin-l; }
+  &-xl { margin-top: variables.$comp-margin-xl; }
+  &-xxl { margin-top: variables.$comp-margin-xxl; }
+}
+
+.mr {
+  &-xxs { margin-right: variables.$comp-margin-xxs; }
+  &-xs { margin-right: variables.$comp-margin-xs; }
+  &-s { margin-right: variables.$comp-margin-s; }
+  &-m { margin-right: variables.$comp-margin-m; }
+  &-l { margin-right: variables.$comp-margin-l; }
+  &-xl { margin-right: variables.$comp-margin-xl; }
+  &-xxl { margin-right: variables.$comp-margin-xxl; }
+}
+
+.mb {
+  &-xxs { margin-bottom: variables.$comp-margin-xxs; }
+  &-xs { margin-bottom: variables.$comp-margin-xs; }
+  &-s { margin-bottom: variables.$comp-margin-s; }
+  &-m { margin-bottom: variables.$comp-margin-m; }
+  &-l { margin-bottom: variables.$comp-margin-l; }
+  &-xl { margin-bottom: variables.$comp-margin-xl; }
+  &-xxl { margin-bottom: variables.$comp-margin-xxl; }
+}
+
+.ml {
+  &-xxs { margin-left: variables.$comp-margin-xxs; }
+  &-xs { margin-left: variables.$comp-margin-xs; }
+  &-s { margin-left: variables.$comp-margin-s; }
+  &-m { margin-left: variables.$comp-margin-m; }
+  &-l { margin-left: variables.$comp-margin-l; }
+  &-xl { margin-left: variables.$comp-margin-xl; }
+  &-xxl { margin-left: variables.$comp-margin-xxl; }
+}
+
+.p {
+  &-xxs { padding: variables.$comp-paddingTB-xxs; }
+  &-xs { padding: variables.$comp-paddingTB-xs; }
+  &-s { padding: variables.$comp-paddingTB-s; }
+  &-m { padding: variables.$comp-paddingTB-m; }
+  &-l { padding: variables.$comp-paddingTB-l; }
+  &-xl { padding: variables.$comp-paddingTB-xl; }
+  &-xxl { padding: variables.$comp-paddingTB-xxl; }
+}
+
+.pt {
+  &-xxs { padding-top: variables.$comp-paddingTB-xxs; }
+  &-xs { padding-top: variables.$comp-paddingTB-xs; }
+  &-s { padding-top: variables.$comp-paddingTB-s; }
+  &-m { padding-top: variables.$comp-paddingTB-m; }
+  &-l { padding-top: variables.$comp-paddingTB-l; }
+  &-xl { padding-top: variables.$comp-paddingTB-xl; }
+  &-xxl { padding-top: variables.$comp-paddingTB-xxl; }
+}
+
+.pr {
+  &-xxs { padding-right: variables.$comp-paddingLR-xxs; }
+  &-xs { padding-right: variables.$comp-paddingLR-xs; }
+  &-s { padding-right: variables.$comp-paddingLR-s; }
+  &-m { padding-right: variables.$comp-paddingLR-m; }
+  &-l { padding-right: variables.$comp-paddingLR-l; }
+  &-xl { padding-right: variables.$comp-paddingLR-xl; }
+  &-xxl { padding-right: variables.$comp-paddingLR-xxl; }
+}
+
+.pb {
+  &-xxs { padding-bottom: variables.$comp-paddingTB-xxs; }
+  &-xs { padding-bottom: variables.$comp-paddingTB-xs; }
+  &-s { padding-bottom: variables.$comp-paddingTB-s; }
+  &-m { padding-bottom: variables.$comp-paddingTB-m; }
+  &-l { padding-bottom: variables.$comp-paddingTB-l; }
+  &-xl { padding-bottom: variables.$comp-paddingTB-xl; }
+  &-xxl { padding-bottom: variables.$comp-paddingTB-xxl; }
+}
+
+.pl {
+  &-xxs { padding-left: variables.$comp-paddingLR-xxs; }
+  &-xs { padding-left: variables.$comp-paddingLR-xs; }
+  &-s { padding-left: variables.$comp-paddingLR-s; }
+  &-m { padding-left: variables.$comp-paddingLR-m; }
+  &-l { padding-left: variables.$comp-paddingLR-l; }
+  &-xl { padding-left: variables.$comp-paddingLR-xl; }
+  &-xxl { padding-left: variables.$comp-paddingLR-xxl; }
+}
+
+// 文本相关工具类
+.text {
+  &-primary { color: variables.$text-color-primary; }
+  &-secondary { color: variables.$text-color-secondary; }
+  &-placeholder { color: variables.$text-color-placeholder; }
+  &-disabled { color: variables.$text-color-disabled; }
+  &-brand { color: variables.$text-color-brand; }
+  &-link { color: variables.$text-color-link; }
+  &-success { color: variables.$success-color; }
+  &-warning { color: variables.$warning-color; }
+  &-error { color: variables.$error-color; }
+}
+
+// Markdown标题样式重置 - 添加在文件末尾以确保优先级最高
+body {
+  // 使用!important和属性选择器提高优先级
+  [class*="chat"] h1,
+  [class*="chat"] h2,
+  [class*="chat"] h3,
+  [class*="chat"] h4,
+  [class*="chat"] h5,
+  [class*="chat"] h6 {
+    margin-top: 0 !important;
+    margin-bottom: 8px !important;
+    padding: 0 !important;
+    line-height: inherit !important;
+  }
+  
+  // 使用更具体的选择器
+  .t-chat__content,
+  .t-chat-content {
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 0 !important;
+      margin-bottom: 8px !important;
+      padding: 0 !important;
+      line-height: inherit !important;
+    }
+  }
+} 

@@ -1,6 +1,6 @@
 <template>
     <t-chat-item :avatar="avatar" :name="name" :role="role" :datetime="datetime" :content="content">
-        <template #content>
+        <template #content cla>
 
             <t-collapse :expand-icon="null" :borderless="true" :default-expand-all="isWorkflowCompleted"
                 class="transparent-collapse" v-if="role === 'assistant' && workflowSteps && workflowSteps.length > 0">
@@ -34,12 +34,11 @@
             <!-- 显示消息内容，如果没有则显示占位 -->
             <t-chat-content v-if="content && content.trim().length > 0" :content="content" class="zero-margins" />
 
-
             <div class="message-files" v-if="files && files.length > 0">
                 <div class="files-scroll-container">
                     <t-tag v-for="(file, index) in files" :key="index" theme="default" variant="light" shape="round"
                         size="medium" class="file-tag">
-                        <t-icon :name="getFileIcon(file.type)" class="file-icon" />
+                        <t-icon :name="getFileIcon(file.type)" class="file-icon" size="240" />
                         <span class="file-name">{{ formatFileName(file.filename) }}</span>
                     </t-tag>
                 </div>
@@ -59,9 +58,8 @@
 
         <!-- 操作按钮，只对助手消息显示 -->
         <template #actions>
-
-            <chat-action v-if="!isStreamLoad && role === 'assistant'" :is-good="isGood" :is-bad="isBad"
-                :content="content || ''" @operation="handleOperation" />
+            <chat-action class="chat-actions-container" v-if="!isStreamLoad && role === 'assistant'" :is-good="isGood" :is-bad="isBad"
+                :content="content || ''" @operation="handleOperation" />    
         </template>
     </t-chat-item>
 </template>
@@ -271,176 +269,145 @@ const getCollapseHeader = (steps) => {
 };
 </script>
 
-<style lang="scss" scoped>
-@import '/static/app/styles/variables.scss';
+<style lang="scss">
+@import '/static/styles/variables.scss';
 
-.loading-space {
-    margin-top: $size-3;
-    margin-left: $size-4;
+/* 添加基础过渡效果 */
+.t-chat-item {
+    transition: all 0.3s ease, width 0.3s ease, max-width 0.3s ease, transform 0.3s ease;
+}
+
+/* 消息内容容器 */
+:deep(.t-chat__bubble) {
+    transition: all 0.3s ease, width 0.3s ease, max-width 0.3s ease;
+}
+
+/* 透明折叠面板 */
+.transparent-collapse {
+    background-color: transparent;
     transition: all 0.3s ease;
+
+    :deep(.t-collapse-panel__header) {
+        background-color: transparent;
+        transition: all 0.3s ease;
+    }
+
+    :deep(.t-collapse-panel__content) {
+        background-color: transparent;
+        transition: all 0.3s ease;
+    }
 }
 
-:deep(.t-chat__detail-reasoning) {
-    padding-top: 0px !important;
+/* 工作流时间线 */
+.workflow-timeline {
+    width: 100%;
+    margin-top: 8px;
+    transition: all 0.3s ease;
+
+    .t-timeline-item {
+        transition: all 0.3s ease;
+    }
 }
 
+/* 思考框样式 */
+:deep(.t-chat-reasoning) {
+    transition: all 0.3s ease, max-width 0.3s ease, width 0.3s ease;
+    
+    .t-chat-reasoning__header, 
+    .t-chat-reasoning__content {
+        transition: all 0.3s ease;
+    }
+}
+
+/* 思考框头部样式 */
 .reasoning-header {
     display: flex;
     align-items: center;
-    justify-content: center;
-    color: $text-color-primary;
-    transition: color 0.3s ease;
+    gap: 6px;
+    transition: all 0.3s ease;
 
     .t-icon {
-        margin-right: $size-2;
-        transition: all 0.3s ease;
+        font-size: 16px;
+        color: var(--td-brand-color);
     }
 }
 
-/* 工作流时间轴样式 */
-.workflow-timeline {
-    margin-top: $size-3;
-
-    :deep(.t-timeline__item) {
-        padding-bottom: $size-4;
-    }
-
-    :deep(.t-timeline__item-dot) {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    :deep(.t-timeline-item__label) {
-        transition: all 0.3s ease;
-    }
-
-    .dot-loading-wrapper {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 100%;
-        height: 100%;
-    }
-
-    .dot-loading-wrapper {
-        :deep(.t-loading__spin) {
-            font-size: 16px;
-        }
-    }
-
-    .step-loading {
-        display: inline-flex;
-        align-items: center;
-        color: var(--td-text-color-secondary);
-
-        .loading-dots {
-            display: inline-block;
-            min-width: 30px;
-            overflow: hidden;
-            text-overflow: clip;
-            white-space: nowrap;
-        }
-    }
+/* 消息内容无边距 */
+.zero-margins {
+    margin: 0 !important;
+    transition: all 0.3s ease;
 }
 
-/* 消息文件展示样式 */
+/* 文件展示区域 */
 .message-files {
-    width: 100%;
+    margin-top: 12px;
+    transition: all 0.3s ease;
 }
 
+/* 文件滚动容器 */
 .files-scroll-container {
     display: flex;
     flex-wrap: nowrap;
     overflow-x: auto;
+    gap: 8px;
+    padding-bottom: 4px;
     scrollbar-width: none;
-    /* Firefox */
-    -webkit-overflow-scrolling: touch;
-    padding: 4px 0;
-    white-space: nowrap;
     -ms-overflow-style: none;
-    /* IE and Edge */
+    transition: all 0.3s ease;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
 }
 
-/* 隐藏滚动条但保留功能 */
-.files-scroll-container::-webkit-scrollbar {
-    display: none;
-    /* Chrome, Safari, Opera */
-}
-
-.files-scroll-container::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.2);
-    border-radius: 4px;
-}
-
+/* 文件标签 */
 .file-tag {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    margin: 0 4px;
-    padding: 2px 6px 2px 10px;
-    background-color: var(--td-bg-color-container, $gray-color-1);
-    border-color: var(--td-component-border, $gray-color-3);
-    flex-shrink: 0;
-
-    .file-icon {
-        color: $success-color-7;
-        font-size: 16px;
-        margin-right: 6px;
-        flex-shrink: 0;
-    }
-
-    .file-name {
-        color: var(--td-text-color-primary, $font-gray-1);
-        max-width: 120px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
+    transition: all 0.3s ease, transform 0.2s ease;
+    
+    // &:hover {
+    //     transform: translateY(-2px);
+    // }
 }
 
-/* 确保Markdown内容中的元素没有边距 */
-:deep(.zero-margins) {
-
-    h1,
-    h2,
-    h3,
-    h4,
-    h5,
-    h6 {
-        margin-top: 0 !important;
-        margin-bottom: 8px !important;
-        padding: 0 !important;
-        line-height: normal !important;
-    }
+/* 文件图标 */
+.file-icon {
+    transition: all 0.3s ease;
+    transform: translate(0px,-1px);
 }
 
-:deep(.t-chat__text--user) {
-    text-align: right !important;
+/* 文件名称 */
+.file-name {
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    margin-right: 3px;
 }
 
-/* 透明折叠面板样式 */
-.transparent-collapse {
-    .workflow-header {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-
-        .t-icon {
-            font-size: 16px;
-        }
-    }
+/* 步骤加载中 */
+.step-loading {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.3s ease;
 }
 
-.t-collapse {
-    background-color: transparent !important;
+/* 加载点动画 */
+.loading-dots {
+    width: 24px;
+    display: inline-block;
+    transition: all 0.3s ease;
 }
 
-:deep(.t-collapse.t--border-less .t-collapse-panel__body) {
-    background-color: transparent !important;
+/* 加载空间 */
+.loading-space {
+    transition: all 0.3s ease;
+    width: 100%;
 }
 
-:deep(.t-collapse-panel__wrapper .t-collapse-panel__content) {
-    padding: 0px 10px !important;
-    margin-top: 10px !important;
+.t-tag .t-icon{
+    width: 12px;
+    height: 12px;
 }
+
 </style>
