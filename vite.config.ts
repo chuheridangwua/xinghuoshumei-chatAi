@@ -12,12 +12,13 @@ export default defineConfig({
     }
   },
   server: {
-    proxy: {
-      '/api': {
-        target: 'https://api.dify.ai',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
-      }
-    }
+    // 移除代理配置，改为直接使用完整URL
+    // proxy: {
+    //   '/api': {
+    //     target: 'https://api.dify.ai',
+    //     changeOrigin: true,
+    //     rewrite: (path) => path.replace(/^\/api/, '')
+    //   }
+    // }
   }
 })
