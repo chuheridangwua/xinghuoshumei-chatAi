@@ -4,7 +4,7 @@
       <div class="logo-container">
         <img src="/static/files/favicon.jpg" alt="Logo" class="welcome-logo" />
       </div>
-      <h1 class="welcome-title">DeepSeek-R1-671B（星火数媒）</h1>
+      <h1 class="welcome-title">星火数媒</h1>
       <p class="welcome-subtitle">有什么我能帮您的吗？</p>
     </div>
     <!-- <div class="example-questions">
