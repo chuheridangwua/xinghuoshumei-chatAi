@@ -4,8 +4,8 @@
       <div class="logo-container">
         <img src="/static/files/favicon.jpg" alt="Logo" class="welcome-logo" />
       </div>
-      <h1 class="welcome-title">星火数媒</h1>
-      <p class="welcome-subtitle">有什么我能帮您的吗？</p>
+      <h1 class="welcome-title">作文评分 AI 智能体</h1>
+      <p class="welcome-subtitle">输入作文题目和内容，我会为你打分、指出亮点和不足，还会给出实用建议，帮你写得更好！</p>
     </div>
     <!-- <div class="example-questions">
       <t-tag v-for="(question, index) in suggestedQuestions" 

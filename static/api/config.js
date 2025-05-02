@@ -12,7 +12,7 @@ export const API_CONFIG = {
     datasetApiKey: 'dataset-NU4Kg7Wtm1616AOnxnRAeFct', // 知识库API密钥
     models: [{
         id: 'DeepSeek-V3',
-        name: '星火智学(DeepSeek-V3)',
+        name: '作文评分 AI 智能体',
         apiKey: 'app-mJY5qTsLUXT3jLAKgfNrTbxP',
     }, {
         id: 'DeepSeek-R1',
@@ -23,6 +23,9 @@ export const API_CONFIG = {
     apiKey: 'app-mJY5qTsLUXT3jLAKgfNrTbxP',
     // defaultModel: 'ds-v3', // 默认选择的模型
     // apiKey: 'app-g3VTn0kdurDWk5M2ehgsmmS9',
+
+    // 静态资源路径配置 - 根据服务器实际部署情况选择合适的路径
+    staticResourceBase: '../static', // 使用绝对路径，避开app前缀
 };
 
 /**

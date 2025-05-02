@@ -69,12 +69,12 @@
         </div>
 
         <!-- 固定底部的主题切换按钮 -->
-        <div class="theme-toggle-container">
+        <!-- <div class="theme-toggle-container">
           <t-button variant="text" size="small" class="theme-toggle-btn" @click="toggleTheme">
             <t-icon :name="currentTheme === 'dark' ? 'sunny' : 'moon'" />
             <span class="theme-text">{{ currentTheme === 'dark' ? '切换到亮色模式' : '切换到暗色模式' }}</span>
           </t-button>
-        </div>
+        </div> -->
       </div>
     </div>
   </transition>

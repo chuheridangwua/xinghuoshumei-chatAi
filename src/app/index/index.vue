@@ -204,7 +204,7 @@ console.log('从URL获取的参数:', { userId, userName });
 onMounted(() => {
     // 初始化主题（默认或者根据系统偏好）
     initTheme();
-    // document.documentElement.setAttribute('theme-mode', 'light');
+    document.documentElement.setAttribute('theme-mode', 'light');
     initChatData();
 });
 
