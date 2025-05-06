@@ -253,7 +253,7 @@ const convertServerMessagesToAppFormat = (serverMessages, conversationId) => {
 
             // 创建基本助手消息
             const assistantMessage = {
-                avatar: `${API_CONFIG.staticResourceBase}/files/favicon.jpg`, // 修正路径，移除多余的static
+                avatar: `https://xinghuoshumei-chat-9d1az3cdd1955-1325585334.tcloudbaseapp.com/static/files/favicon.jpg`, // 修正路径，移除多余的static
                 name: '星火数媒',
                 datetime: new Date(msg.created_at * 1000).toLocaleString(),
                 content: content || '',
@@ -431,7 +431,7 @@ export const createUserMessage = (content, files = []) => {
  */
 export const createAssistantMessage = (isDeepThinking = false) => {
     const baseMessage = {
-        avatar: `${API_CONFIG.staticResourceBase}/files/favicon.jpg`, // 修正路径，移除多余的static
+        avatar: `https://xinghuoshumei-chat-9d1az3cdd1955-1325585334.tcloudbaseapp.com/static/files/favicon.jpg`, // 修正路径，移除多余的static
         name: '星火数媒',
         datetime: new Date().toLocaleString(),
         content: '',
